@@ -4,11 +4,12 @@ import NestedTuple exposing (..)
 
 
 myTuple =
-    cons 2 (singleton "hello")
+    cons 2.5 (cons 2 (singleton "hello"))
 
 
 myMapper =
     define
+        |> map (\n -> n / 2.0)
         |> map (\n -> n * 2)
         |> map (\s -> s ++ s)
         |> endMap
@@ -20,6 +21,7 @@ mapped =
 
 myFolder =
     define
+        |> fold (\n acc -> round n + acc)
         |> fold (\n acc -> n + acc)
         |> fold (\s acc -> String.length s + acc)
         |> endFold
@@ -31,6 +33,7 @@ folded =
 
 myMapper2 =
     define
+        |> map2 (\a b -> a / b)
         |> map2 (\a b -> a + b)
         |> map2 (\a b -> String.length (a ++ b))
         |> endMap2
@@ -42,6 +45,7 @@ mapped2 =
 
 myMapper3 =
     define
+        |> map3 (\a b c -> a / b / c)
         |> map3 (\a b c -> a + b + c)
         |> map3 (\a b c -> String.length (a ++ b ++ c))
         |> endMap3
@@ -53,6 +57,7 @@ mapped3 =
 
 getSet =
     defineAccessors
+        |> accessors
         |> accessors
         |> accessors
         |> endAccessors
@@ -68,12 +73,11 @@ myHead =
 
 setTuple =
     let
-        firstSetter =
-            head getSet.setters
-
-        secondSetter =
-            head (tail getSet.setters)
+        folder =
+            define
+                |> fold (\setter acc -> setter 3.5 acc)
+                |> fold (\setter acc -> setter 3 acc)
+                |> fold (\setter acc -> setter "world" acc)
+                |> endFold
     in
-    myTuple
-        |> firstSetter 42
-        |> secondSetter "cheese"
+    folder myTuple getSet.setters 

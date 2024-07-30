@@ -6,10 +6,12 @@ module NestedTuple exposing
     , empty
     , endAccessors
     , endFold
+    , endFold2
     , endMap
     , endMap2
     , endMap3
     , fold
+    , fold2
     , head
     , map
     , map2
@@ -22,8 +24,8 @@ module NestedTuple exposing
     )
 
 {- From these first four functions (`empty`, `cons`, `head` and `tail`), all the
-   others can be derived. 
-   
+   others can be derived.
+
    So if you wanted to represent a nested tuple as something other than a tuple,
    for example `type alias MyTuple = { head : a, tail : b }` or `type MyTuple a
    b = MyTuple a b`, just vendor this package and redefine these four functions,
@@ -102,8 +104,25 @@ fold =
     do folder
 
 
+fold2 =
+    let
+        flip f arg1 arg2 arg3 =
+            f arg3 arg1 arg2
+
+        folder foldHead foldTail acc tuple1 tuple2 =
+            acc
+                |> foldHead (head tuple1) (head tuple2)
+                |> flip foldTail (tail tuple1) (tail tuple2)
+    in
+    do folder
+
+
 endFold =
     end (\acc _ -> acc)
+
+
+endFold2 =
+    end (\acc _ _ -> acc)
 
 
 map =
