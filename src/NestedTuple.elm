@@ -7,10 +7,12 @@ module NestedTuple exposing
     , endMap2
     , endMap3
     , fold
+    , head
     , map
     , map2
     , map3
     , singleton
+    , tail
     )
 
 
@@ -22,9 +24,9 @@ end ender prev =
     prev ender
 
 
-{-| Define a "fold" for nested tuples of a particular type
+{-| Define a "fold" for nested tupleles of a particular type
 
-    tup =
+    tuple =
     ( 1, ( "hello", () ) )
 
     myFold =
@@ -33,15 +35,20 @@ end ender prev =
     |> fold (\\s acc -> String.length s + acc)
     |> endFold
 
-    myFold 0 tup
+    myFold 0 tuple
 
     --> 6
 
 -}
 fold =
     let
-        folder foldThis_ foldRest_ acc ( this, rest ) =
-            foldRest_ (foldThis_ this acc) rest
+        flip f arg1 arg2 =
+            f arg2 arg1
+
+        folder foldHead foldTail acc tuple =
+            acc
+                |> foldHead (head tuple)
+                |> flip foldTail (tail tuple)
     in
     do folder
 
@@ -64,10 +71,10 @@ define =
 
 map2 =
     let
-        mapper2 mapThis mapRest ( thisA, restA ) ( thisB, restB ) =
-            ( mapThis thisA thisB
-            , mapRest restA restB
-            )
+        mapper2 mapHead mapTail a b =
+            cons
+                (mapHead (head a) (head b))
+                (mapTail (tail a) (tail b))
     in
     do mapper2
 
@@ -78,10 +85,10 @@ endMap2 =
 
 map3 =
     let
-        mapper2 mapThis mapRest ( thisA, restA ) ( thisB, restB ) ( thisC, restC ) =
-            ( mapThis thisA thisB thisC
-            , mapRest restA restB restC
-            )
+        mapper2 mapHead mapTail a b c =
+            cons
+                (mapHead (head a) (head b) (head c))
+                (mapTail (tail a) (tail b) (tail c))
     in
     do mapper2
 
@@ -101,5 +108,13 @@ singleton a =
 
 
 cons : a -> b -> ( a, b )
-cons a tup =
-    ( a, tup )
+cons a tuple =
+    ( a, tuple )
+
+
+head =
+    Tuple.first
+
+
+tail =
+    Tuple.second
