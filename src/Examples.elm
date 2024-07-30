@@ -8,8 +8,8 @@ myTuple =
     cons 2 (singleton "hello")
 
 
-myMap : ( Int, ( String, () ) ) -> ( Int, ( String, () ) )
-myMap =
+myMapper : ( Int, ( String, () ) ) -> ( Int, ( String, () ) )
+myMapper =
     define
         |> map (\n -> n * 2)
         |> map (\s -> s ++ s)
@@ -18,11 +18,11 @@ myMap =
 
 mapped : ( Int, ( String, () ) )
 mapped =
-    myMap myTuple
+    myMapper myTuple
 
 
-myFold : Int -> ( Int, ( String, () ) ) -> Int
-myFold =
+myFolder : Int -> ( Int, ( String, () ) ) -> Int
+myFolder =
     define
         |> fold (\n acc -> n + acc)
         |> fold (\s acc -> String.length s + acc)
@@ -31,11 +31,11 @@ myFold =
 
 folded : Int
 folded =
-    myFold 0 myTuple
+    myFolder 0 myTuple
 
 
-myMap2 : ( Int, ( String, () ) ) -> ( Int, ( String, () ) ) -> ( Int, ( Int, () ) )
-myMap2 =
+myMapper2 : ( Int, ( String, () ) ) -> ( Int, ( String, () ) ) -> ( Int, ( Int, () ) )
+myMapper2 =
     define
         |> map2 (\a b -> a + b)
         |> map2 (\a b -> String.length (a ++ b))
@@ -44,11 +44,11 @@ myMap2 =
 
 mapped2 : ( Int, ( Int, () ) )
 mapped2 =
-    myMap2 myTuple myTuple
+    myMapper2 myTuple myTuple
 
 
-myMap3 : ( Int, ( String, () ) ) -> ( Int, ( String, () ) ) -> ( Int, ( String, () ) ) -> ( Int, ( Int, () ) )
-myMap3 =
+myMapper3 : ( Int, ( String, () ) ) -> ( Int, ( String, () ) ) -> ( Int, ( String, () ) ) -> ( Int, ( Int, () ) )
+myMapper3 =
     define
         |> map3 (\a b c -> a + b + c)
         |> map3 (\a b c -> String.length (a ++ b ++ c))
@@ -57,4 +57,4 @@ myMap3 =
 
 mapped3 : ( Int, ( Int, () ) )
 mapped3 =
-    myMap3 myTuple myTuple myTuple
+    myMapper3 myTuple myTuple myTuple

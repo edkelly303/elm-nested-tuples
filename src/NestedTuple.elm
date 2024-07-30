@@ -24,18 +24,18 @@ end ender prev =
     prev ender
 
 
-{-| Define a "fold" for nested tupleles of a particular type
+{-| Define a "folder" for nested tuples of a particular type
 
     tuple =
-    ( 1, ( "hello", () ) )
+        ( 1, ( "hello", () ) )
 
-    myFold =
-    defineFold
-    |> fold (\\n acc -> n + acc)
-    |> fold (\\s acc -> String.length s + acc)
-    |> endFold
+    myFolder =
+        define
+            |> fold (\\n acc -> n + acc)
+            |> fold (\\s acc -> String.length s + acc)
+            |> endFold
 
-    myFold 0 tuple
+    myFolder 0 tuple
 
     --> 6
 
