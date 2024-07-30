@@ -31,6 +31,18 @@ folded =
     myFolder 0 myTuple
 
 
+myFolder2 =
+    define
+        |> fold2 (\n1 n2 acc -> round (n1 + n2) + acc)
+        |> fold2 (\n1 n2 acc -> n1 + n2 + acc)
+        |> fold2 (\s1 s2 acc -> String.length (s1 ++ s2) + acc)
+        |> endFold2
+
+
+folded2 =
+    myFolder2 0 myTuple myTuple
+
+
 myMapper2 =
     define
         |> map2 (\a b -> a / b)
@@ -80,4 +92,4 @@ setTuple =
                 |> fold (\setter acc -> setter "world" acc)
                 |> endFold
     in
-    folder myTuple getSet.setters 
+    folder myTuple getSet.setters
