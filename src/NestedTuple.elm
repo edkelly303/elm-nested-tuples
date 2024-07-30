@@ -106,13 +106,12 @@ fold =
 
 fold2 =
     let
-        flip f arg1 arg2 arg3 =
-            f arg3 arg1 arg2
-
         folder foldHead foldTail acc tuple1 tuple2 =
-            acc
-                |> foldHead (head tuple1) (head tuple2)
-                |> flip foldTail (tail tuple1) (tail tuple2)
+            let
+                acc2 =
+                    foldHead (head tuple1) (head tuple2) acc
+            in
+            foldTail acc2 (tail tuple1) (tail tuple2)
     in
     do folder
 
