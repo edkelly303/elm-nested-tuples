@@ -58,3 +58,31 @@ myMapper3 =
 mapped3 : ( Int, ( Int, () ) )
 mapped3 =
     myMapper3 myTuple myTuple myTuple
+
+
+getSet =
+    defineAccessors
+        |> accessors
+        |> accessors
+        |> endAccessors
+
+
+myHead =
+    let
+        firstGetter =
+            head getSet.getters
+    in
+    firstGetter myTuple
+
+
+setTuple =
+    let
+        firstSetter =
+            head getSet.setters
+
+        secondSetter =
+            head (tail getSet.setters)
+    in
+    myTuple
+    |> firstSetter 42
+    |> secondSetter "cheese"

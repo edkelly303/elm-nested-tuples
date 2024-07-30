@@ -1,7 +1,10 @@
 module NestedTuple exposing
-    ( cons
+    ( accessors
+    , cons
     , define
+    , defineAccessors
     , empty
+    , endAccessors
     , endFold
     , endMap
     , endMap2
@@ -118,3 +121,25 @@ head =
 
 tail =
     Tuple.second
+
+
+defineAccessors =
+    { get = identity
+    , set = identity
+    , getters = identity
+    , setters = identity
+    }
+
+
+accessors prev =
+    { get = prev.get << tail
+    , set = prev.set << Tuple.mapSecond
+    , getters = prev.getters << cons (prev.get << head)
+    , setters = prev.setters << cons (prev.set << (\val tuple -> cons val (tail tuple)))
+    }
+
+
+endAccessors prev =
+    { getters = prev.getters ()
+    , setters = prev.setters ()
+    }
