@@ -1,4 +1,17 @@
-module NestedTuple exposing (..)
+module NestedTuple exposing
+    ( cons
+    , define
+    , empty
+    , endFold
+    , endMap
+    , endMap2
+    , endMap3
+    , fold
+    , map
+    , map2
+    , map3
+    , singleton
+    )
 
 
 do doer doThis doPrev =
@@ -25,10 +38,6 @@ end ender prev =
     --> 6
 
 -}
-defineFold =
-    identity
-
-
 fold =
     let
         folder foldThis_ foldRest_ acc ( this, rest ) =
@@ -41,30 +50,56 @@ endFold =
     end (\acc () -> acc)
 
 
-defineMap =
-    identity
-
-
 map =
-    let
-        mapper mapThis_ mapRest_ ( this, rest ) =
-            ( mapThis_ this
-            , mapRest_ rest
-            )
-    in
-    do mapper
+    do Tuple.mapBoth
 
 
 endMap =
     end (\() -> ())
 
 
-m =
-    defineMap
-        |> map (\n -> n * 2)
-        |> map (\s -> s ++ s)
-        |> endMap
+define =
+    identity
 
 
-tup =
-    ( 1, ( "hello", () ) )
+map2 =
+    let
+        mapper2 mapThis mapRest ( thisA, restA ) ( thisB, restB ) =
+            ( mapThis thisA thisB
+            , mapRest restA restB
+            )
+    in
+    do mapper2
+
+
+endMap2 =
+    end (\() () -> ())
+
+
+map3 =
+    let
+        mapper2 mapThis mapRest ( thisA, restA ) ( thisB, restB ) ( thisC, restC ) =
+            ( mapThis thisA thisB thisC
+            , mapRest restA restB restC
+            )
+    in
+    do mapper2
+
+
+endMap3 =
+    end (\() () () -> ())
+
+
+empty : ()
+empty =
+    ()
+
+
+singleton : a -> ( a, () )
+singleton a =
+    cons a empty
+
+
+cons : a -> b -> ( a, b )
+cons a tup =
+    ( a, tup )
