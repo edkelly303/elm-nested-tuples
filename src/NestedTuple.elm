@@ -14,17 +14,63 @@ module NestedTuple exposing
     , map
     , map2
     , map3
+    , mapBoth
+    , mapHead
+    , mapTail
     , singleton
     , tail
     )
 
+{- From these first four functions (`empty`, `cons`, `head` and `tail`), all the
+   others can be derived. 
+   
+   So if you wanted to represent a nested tuple as something other than a tuple,
+   for example `type alias MyTuple = { head : a, tail : b }` or `type MyTuple a
+   b = MyTuple a b`, just vendor this package and redefine these four functions,
+   and everything else should _just work_.
+-}
 
-do doer doThis doPrev =
-    \doRest -> doPrev (doer doThis doRest)
+
+empty =
+    ()
 
 
-end ender prev =
-    prev ender
+cons a tuple =
+    ( a, tuple )
+
+
+head =
+    Tuple.first
+
+
+tail =
+    Tuple.second
+
+
+singleton a =
+    cons a empty
+
+
+mapHead f tuple =
+    cons
+        (f (head tuple))
+        (tail tuple)
+
+
+mapTail f tuple =
+    cons
+        (head tuple)
+        (f (tail tuple))
+
+
+mapBoth headF tailF tuple =
+    cons
+        (headF (head tuple))
+        (tailF (tail tuple))
+
+
+define =
+    identity
 
 
 {-| Define a "folder" for nested tuples of a particular type
@@ -57,70 +103,43 @@ fold =
 
 
 endFold =
-    end (\acc () -> acc)
+    end (\acc _ -> acc)
 
 
 map =
-    do Tuple.mapBoth
+    do mapBoth
 
 
 endMap =
-    end (\() -> ())
-
-
-define =
-    identity
+    end (\_ -> empty)
 
 
 map2 =
     let
-        mapper2 mapHead mapTail a b =
+        mapper2 map2Head map2Tail a b =
             cons
-                (mapHead (head a) (head b))
-                (mapTail (tail a) (tail b))
+                (map2Head (head a) (head b))
+                (map2Tail (tail a) (tail b))
     in
     do mapper2
 
 
 endMap2 =
-    end (\() () -> ())
+    end (\_ _ -> empty)
 
 
 map3 =
     let
-        mapper2 mapHead mapTail a b c =
+        mapper2 map3Head map3Tail a b c =
             cons
-                (mapHead (head a) (head b) (head c))
-                (mapTail (tail a) (tail b) (tail c))
+                (map3Head (head a) (head b) (head c))
+                (map3Tail (tail a) (tail b) (tail c))
     in
     do mapper2
 
 
 endMap3 =
-    end (\() () () -> ())
-
-
-empty : ()
-empty =
-    ()
-
-
-singleton : a -> ( a, () )
-singleton a =
-    cons a empty
-
-
-cons : a -> b -> ( a, b )
-cons a tuple =
-    ( a, tuple )
-
-
-head =
-    Tuple.first
-
-
-tail =
-    Tuple.second
+    end (\_ _ _ -> empty)
 
 
 defineAccessors =
@@ -128,18 +147,29 @@ defineAccessors =
     , set = identity
     , getters = identity
     , setters = identity
+    , updaters = identity
     }
 
 
 accessors prev =
     { get = prev.get << tail
-    , set = prev.set << Tuple.mapSecond
+    , set = prev.set << mapTail
     , getters = prev.getters << cons (prev.get << head)
-    , setters = prev.setters << cons (prev.set << (\val tuple -> cons val (tail tuple)))
+    , setters = prev.setters << cons (prev.set << mapHead << always)
+    , updaters = prev.updaters << cons (prev.set << mapHead)
     }
 
 
 endAccessors prev =
-    { getters = prev.getters ()
-    , setters = prev.setters ()
+    { getters = prev.getters empty
+    , setters = prev.setters empty
+    , updaters = prev.updaters empty
     }
+
+
+do doer doThis doPrev =
+    \doRest -> doPrev (doer doThis doRest)
+
+
+end ender prev =
+    prev ender
