@@ -51,7 +51,7 @@ counter =
 
 
 textInput =
-    { init = "hello"
+    { init = ""
     , update = \msg state -> msg
     , view =
         \state ->
@@ -77,7 +77,7 @@ type Msg msg
     | Msg msg
 
 
-add args builder =
+add component builder =
     { emptyMsg = NT.cons NoMsg builder.emptyMsg
     , accessors = NT.accessors builder.accessors
     , updater =
@@ -85,7 +85,7 @@ add args builder =
             (\msg model ->
                 case msg of
                     Msg msg_ ->
-                        args.update msg_ model
+                        component.update msg_ model
 
                     NoMsg ->
                         model
@@ -95,7 +95,7 @@ add args builder =
         NT.fold2
             (\msgMapper model ( listOfViews, emptyMsg ) ->
                 ( (model
-                    |> args.view
+                    |> component.view
                     |> Html.map (\msg -> msgMapper (Msg msg) emptyMsg)
                   )
                     :: listOfViews
@@ -104,7 +104,7 @@ add args builder =
             )
             builder.viewer
     , init =
-        builder.init << NT.cons args.init
+        builder.init << NT.cons component.init
     }
 
 
