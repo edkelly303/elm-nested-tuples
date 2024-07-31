@@ -65,3 +65,23 @@ myMapper3 =
 
 mapped3 =
     myMapper3 myTuple myTuple myTuple
+
+
+getters =
+    defineGetters
+        |> getter
+        |> getter
+        |> endGetters
+
+
+got =
+    let
+        getFirst =
+            head getters
+
+        getSecond =
+            head (tail getters)
+    in
+    { first = getFirst myTuple
+    , second = getSecond myTuple
+    }
