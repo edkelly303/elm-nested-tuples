@@ -418,10 +418,13 @@ endFolder3 =
 
 {-| Begin the definition of a tuple of `getters`.
 -}
-defineGetters : { get : get -> get, getters : getters -> getters }
+defineGetters :
+    { focus : focus -> focus
+    , appendToGetters : getters -> getters
+    }
 defineGetters =
-    { get = identity
-    , getters = identity
+    { focus = identity
+    , appendToGetters = identity
     }
 
 
@@ -438,32 +441,46 @@ This needs to be used in conjunction with `defineGetters` and `endGetters`:
 
 -}
 getter :
-    { get : b -> c1
-    , getters : ( ( b, b1 ) -> c1, a ) -> c
+    { appendToGetters : ( tuple -> head, nextGetters ) -> getters
+    , focus : tuple -> ( head, tail )
     }
     ->
-        { get : ( a1, b ) -> c1
-        , getters : a -> c
+        { appendToGetters : nextGetters -> getters
+        , focus : tuple -> tail
         }
-getter prev =
-    { get = prev.get << tail
-    , getters = prev.getters << cons (prev.get << head)
+getter { focus, appendToGetters } =
+    let
+        nextFocus tuple =
+            tail (focus tuple)
+
+        thisGetter tuple =
+            head (focus tuple)
+    in
+    { focus = nextFocus
+    , appendToGetters = \nextGetter -> appendToGetters (cons thisGetter nextGetter)
     }
 
 
 {-| Complete the definition of a tuple of `getters`.
 -}
-endGetters : { b | getters : () -> a } -> a
-endGetters prev =
-    prev.getters empty
+endGetters :
+    { focus : focus
+    , appendToGetters : () -> getters
+    }
+    -> getters
+endGetters { appendToGetters } =
+    appendToGetters empty
 
 
 {-| Begin the definition of a tuple of `setters`.
 -}
-defineSetters : { set : set -> set, setters : setters -> setters }
+defineSetters :
+    { focus : focus -> focus
+    , appendToSetters : setters -> setters
+    }
 defineSetters =
-    { set = identity
-    , setters = identity
+    { focus = identity
+    , appendToSetters = identity
     }
 
 
@@ -479,25 +496,49 @@ This needs to be used in conjunction with `defineSetters` and `endSetters`:
     --> ( \value tuple -> tuple |> Tuple.mapFirst (always value), ( \value tuple -> tuple |> Tuple.mapSecond |> Tuple.mapFirst (always value), () ) )
 
 -}
+
+
+
+-- setter :
+--     { focus : (( head, tail ) -> ( head, tail )) -> set
+--     , appendToSetters : ( head -> set, nextSetters ) -> setters
+--     }
+--     ->
+--         { focus : (tail -> tail) -> set
+--         , appendToSetters : nextSetters -> setters
+--         }
+
+
 setter :
-    { set : (( head, tail ) -> ( head, tail )) -> set
-    , setters : ( head -> set, nextSetters ) -> setters
+    { appendToSetters : ( head -> tuple -> tuple, nextSetters ) -> setters
+    , focus : (( head, tail ) -> ( head, tail )) -> tuple -> tuple
     }
     ->
-        { set : (tail -> tail) -> set
-        , setters : nextSetters -> setters
+        { appendToSetters : nextSetters -> setters
+        , focus : (tail -> tail) -> tuple -> tuple
         }
-setter prev =
-    { set = prev.set << mapTail
-    , setters = prev.setters << cons (prev.set << mapHead << always)
+setter { focus, appendToSetters } =
+    let
+        nextFocus f tuple =
+            focus (mapTail f) tuple
+
+        thisSetter value tuple =
+            focus (mapHead (always value)) tuple
+    in
+    { focus = nextFocus
+    , appendToSetters = \nextSetter -> appendToSetters (cons thisSetter nextSetter)
     }
 
 
 {-| Complete the definition of a tuple of `setters`.
 -}
-endSetters : { b | setters : () -> a } -> a
-endSetters prev =
-    prev.setters empty
+endSetters :
+    { focus : focus
+    , appendToSetters : () -> setters
+    }
+    -> setters
+endSetters { appendToSetters } =
+    appendToSetters empty
 
 
 
