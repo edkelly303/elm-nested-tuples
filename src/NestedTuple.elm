@@ -19,13 +19,18 @@ the form:
 
 @docs empty, cons, head, tail
 
-From the four primitive functions `empty`, `cons`, `head` and `tail`, all the
+**Note:** From the four primitive functions `empty`, `cons`, `head` and `tail`, all the
 others can be derived.
 
-So if you wanted to represent a nested tuple as something other than a tuple,
-for example `type alias MyTuple = { head : a, tail : b }` or `type MyTuple a
-b = MyTuple a b`, you could just vendor this package and redefine these four
-functions for your data type, and everything else should _just work_.
+In your own project, you might want to represent a nested tuple as something
+other than a tuple, for example:
+
+  - `type alias MyTuple a b = { head : a, tail : b }`
+  - `type MyTuple a b = MyTuple a b`
+
+If so, you could just vendor this package and redefine these four functions
+for your preferred data type, then delete all the type annotations, and everything
+else should _just work_.
 
 
 # Utilities
@@ -158,16 +163,134 @@ appender value prev next =
 
 {-| Complete the definition of an `appender`.
 -}
-endAppender : (() -> ( head, () )) -> ( head, () )
+endAppender : (() -> tuple) -> tuple
 endAppender prev =
     prev empty
+
+
+
+-- Mappers
+
+
+{-| Create a `mapper` for a nested tuple by defining a map functions for each element of the tuple.
+
+This needs to be used in conjunction with `define` and `endMapper`:
+
+    double =
+        define
+            |> mapper (\int -> int * 2)
+            |> mapper (\float -> float + float)
+            |> endMapper
+
+    double ( 1, ( 1.5, () ) )
+
+    --> ( 2, ( 3.0, () ) )
+
+-}
+mapper :
+    (headA -> headB)
+    -> ((( headA, tailA ) -> ( headB, tailB )) -> tuple)
+    -> (tailA -> tailB)
+    -> tuple
+mapper =
+    let
+        mapper_ fHead fTail a =
+            cons
+                (fHead (head a))
+                (fTail (tail a))
+    in
+    do mapper_
+
+
+{-| Complete the definition of a `mapper`.
+-}
+endMapper : ((() -> ()) -> tuple) -> tuple
+endMapper =
+    end (\_ -> empty)
+
+
+{-| Create a `mapper` for two nested tuples by defining map functions for each element of the tuples.
+
+This needs to be used in conjunction with `define` and `endMapper2`:
+
+    add =
+        define
+            |> mapper2 (\int1 int2 -> int1 + int2)
+            |> mapper2 (\float1 float2 -> float1 + float2)
+            |> endMapper2
+
+    add ( 1, ( 1.5, () ) )
+        ( 2, ( 2.5, () ) )
+
+    --> ( 3, ( 4.0, () ) )
+
+-}
+mapper2 :
+    (headA -> headB -> headC)
+    -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC )) -> tuple)
+    -> (tailA -> tailB -> tailC)
+    -> tuple
+mapper2 =
+    let
+        mapper2_ fHead fTail a b =
+            cons
+                (fHead (head a) (head b))
+                (fTail (tail a) (tail b))
+    in
+    do mapper2_
+
+
+{-| Complete the definition of a `mapper2`.
+-}
+endMapper2 : ((() -> () -> ()) -> tuple) -> tuple
+endMapper2 =
+    end (\_ _ -> empty)
+
+
+{-| Create a `mapper` for three nested tuples by defining map functions for each element of the tuples.
+
+This needs to be used in conjunction with `define` and `endMapper3`:
+
+    add =
+        define
+            |> mapper3 (\int1 int2 int3 -> int1 + int2 + int3)
+            |> mapper3 (\float1 float2 float3 -> float1 + float2 + float3)
+            |> endMapper3
+
+    add ( 1, ( 1.5, () ) )
+        ( 2, ( 2.5, () ) )
+        ( 3, ( 3.5, () ) )
+
+    --> ( 6, ( 7.5, () ) )
+
+-}
+mapper3 :
+    (headA -> headB -> headC -> headD)
+    -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> ( headD, tailD )) -> tuple)
+    -> (tailA -> tailB -> tailC -> tailD)
+    -> tuple
+mapper3 =
+    let
+        mapper3_ fHead fTail a b c =
+            cons
+                (fHead (head a) (head b) (head c))
+                (fTail (tail a) (tail b) (tail c))
+    in
+    do mapper3_
+
+
+{-| Complete the definition of a `mapper3`.
+-}
+endMapper3 : ((() -> () -> () -> ()) -> tuple) -> tuple
+endMapper3 =
+    end (\_ _ _ -> empty)
 
 
 
 -- Folders
 
 
-{-| Create a folder for a nested tuple by defining fold functions for each element of the tuple.
+{-| Create a `folder` for a nested tuple by defining fold functions for each element of the tuple.
 
 This needs to be used in conjunction with `define` and `endFolder`:
 
@@ -182,7 +305,11 @@ This needs to be used in conjunction with `define` and `endFolder`:
     --> 2.5
 
 -}
-folder : (a -> c -> d) -> ((c -> ( a, b ) -> e) -> f) -> (d -> b -> e) -> f
+folder :
+    (head -> accForHead -> accForTail)
+    -> ((accForHead -> ( head, tail ) -> foldedTail) -> foldedHead)
+    -> (accForTail -> tail -> foldedTail)
+    -> foldedHead
 folder =
     let
         folder_ foldHead foldTail accForHead tuple =
@@ -197,12 +324,12 @@ folder =
 
 {-| Complete the definition of a `folder`.
 -}
-endFolder : ((a -> b -> a) -> c) -> c
+endFolder : ((a -> () -> a) -> c) -> c
 endFolder =
     end (\acc _ -> acc)
 
 
-{-| Create a folder for two nested tuples by defining fold functions for each element of the tuples.
+{-| Create a `folder2` for two nested tuples by defining fold functions for each element of the tuples.
 
 This needs to be used in conjunction with `define` and `endFolder2`:
 
@@ -243,7 +370,7 @@ endFolder2 =
     end (\acc _ _ -> acc)
 
 
-{-| Create a folder for three nested tuples by defining fold functions for each element of the tuples.
+{-| Create a `folder3` for three nested tuples by defining fold functions for each element of the tuples.
 
 This needs to be used in conjunction with `define` and `endFolder3`:
 
@@ -283,120 +410,6 @@ folder3 =
 endFolder3 : ((a -> b -> c -> d -> a) -> e) -> e
 endFolder3 =
     end (\acc _ _ _ -> acc)
-
-
-
--- Mappers
-
-
-{-| Create a `mapper` for a nested tuple by defining a map functions for each element of the tuple.
-
-This needs to be used in conjunction with `define` and `endMapper`:
-
-    double =
-        define
-            |> mapper (\int -> int * 2)
-            |> mapper (\float -> float + float)
-            |> endMapper
-
-    double ( 1, ( 1.5, () ) )
-
-    --> ( 2, ( 3.0, () ) )
-
--}
-mapper : (a -> c) -> ((( a, b ) -> ( c, d )) -> e) -> (b -> d) -> e
-mapper =
-    let
-        mapper_ fHead fTail a =
-            cons
-                (fHead (head a))
-                (fTail (tail a))
-    in
-    do mapper_
-
-
-{-| Complete the definition of a `mapper`.
--}
-endMapper : ((a -> ()) -> b) -> b
-endMapper =
-    end (\_ -> empty)
-
-
-{-| Create a `mapper` for two nested tuples by defining map functions for each element of the tuples.
-
-This needs to be used in conjunction with `define` and `endMapper2`:
-
-    add =
-        define
-            |> mapper2 (\int1 int2 -> int1 + int2)
-            |> mapper2 (\float1 float2 -> float1 + float2)
-            |> endMapper2
-
-    add ( 1, ( 1.5, () ) )
-        ( 2, ( 2.5, () ) )
-
-    --> ( 3, ( 4.0, () ) )
-
--}
-mapper2 :
-    (a1 -> a -> c)
-    -> ((( a1, b1 ) -> ( a, b ) -> ( c, d )) -> e)
-    -> (b1 -> b -> d)
-    -> e
-mapper2 =
-    let
-        mapper2_ fHead fTail a b =
-            cons
-                (fHead (head a) (head b))
-                (fTail (tail a) (tail b))
-    in
-    do mapper2_
-
-
-{-| Complete the definition of a `mapper2`.
--}
-endMapper2 : ((a -> b -> ()) -> c) -> c
-endMapper2 =
-    end (\_ _ -> empty)
-
-
-{-| Create a `mapper` for three nested tuples by defining map functions for each element of the tuples.
-
-This needs to be used in conjunction with `define` and `endMapper3`:
-
-    add =
-        define
-            |> mapper3 (\int1 int2 int3 -> int1 + int2 + int3)
-            |> mapper3 (\float1 float2 float3 -> float1 + float2 + float3)
-            |> endMapper3
-
-    add ( 1, ( 1.5, () ) )
-        ( 2, ( 2.5, () ) )
-        ( 3, ( 3.5, () ) )
-
-    --> ( 6, ( 7.5, () ) )
-
--}
-mapper3 :
-    (a2 -> a1 -> a -> c)
-    -> ((( a2, b2 ) -> ( a1, b1 ) -> ( a, b ) -> ( c, d )) -> e)
-    -> (b2 -> b1 -> b -> d)
-    -> e
-mapper3 =
-    let
-        mapper3_ fHead fTail a b c =
-            cons
-                (fHead (head a) (head b) (head c))
-                (fTail (tail a) (tail b) (tail c))
-    in
-    do mapper3_
-
-
-{-| Complete the definition of a `mapper3`.
--}
-endMapper3 : ((a -> b -> c -> ()) -> d) -> d
-endMapper3 =
-    end (\_ _ _ -> empty)
 
 
 
