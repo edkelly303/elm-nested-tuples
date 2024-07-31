@@ -10,17 +10,16 @@ module NestedTuple exposing
     )
 
 {-| This library provides utility functions for working with nested tuples of
-the form `( a, ( b, ( c, () ) ) )`.
+the form:
+
+`( a, ( b, ( c, () ) ) )`.
 
 
 # Primitives
 
 @docs empty, cons, head, tail
 
-
-### Note
-
-From the four functions `empty`, `cons`, `head` and `tail`, all the
+From the four primitive functions `empty`, `cons`, `head` and `tail`, all the
 others can be derived.
 
 So if you wanted to represent a nested tuple as something other than a tuple,
@@ -68,24 +67,28 @@ functions for your data type, and everything else should _just work_.
 
 {-| Create an empty nested tuple.
 -}
+empty : ()
 empty =
     ()
 
 
 {-| Prepend a value to a nested tuple.
 -}
+cons : head -> tail -> ( head, tail )
 cons a tuple =
     ( a, tuple )
 
 
 {-| Get the head (first element) of a nested tuple.
 -}
+head : ( head, tail ) -> head
 head =
     Tuple.first
 
 
 {-| Get the tail (everything except the first element) of a nested tuple.
 -}
+tail : ( head, tail ) -> tail
 tail =
     Tuple.second
 
@@ -96,12 +99,14 @@ tail =
 
 {-| Create a nested tuple with one element.
 -}
+singleton : head -> ( head, () )
 singleton a =
     cons a empty
 
 
 {-| Map over the head of a nested tuple.
 -}
+mapHead : (headA -> headB) -> ( headA, tail ) -> ( headB, tail )
 mapHead f tuple =
     cons
         (f (head tuple))
@@ -110,6 +115,7 @@ mapHead f tuple =
 
 {-| Map over the tail of a nested tuple.
 -}
+mapTail : (tailA -> tailB) -> ( head, tailA ) -> ( head, tailB )
 mapTail f tuple =
     cons
         (head tuple)
@@ -118,6 +124,7 @@ mapTail f tuple =
 
 {-| Begin the definition of an `appender`, `mapper`, or `folder`.
 -}
+define : a -> a
 define =
     identity
 
@@ -144,12 +151,14 @@ This needs to be used in conjunction with `define` and `endAppender`:
     --> ( "hello", ( "world", () ) )
 
 -}
+appender : head -> (( head, tail ) -> tuple) -> tail -> tuple
 appender value prev next =
     prev ( value, next )
 
 
 {-| Complete the definition of an `appender`.
 -}
+endAppender : (() -> ( head, () )) -> ( head, () )
 endAppender prev =
     prev empty
 
@@ -173,6 +182,7 @@ This needs to be used in conjunction with `define` and `endFolder`:
     --> 2.5
 
 -}
+folder : (a -> c -> d) -> ((c -> ( a, b ) -> e) -> f) -> (d -> b -> e) -> f
 folder =
     let
         folder_ foldHead foldTail accForHead tuple =
@@ -187,6 +197,7 @@ folder =
 
 {-| Complete the definition of a `folder`.
 -}
+endFolder : ((a -> b -> a) -> c) -> c
 endFolder =
     end (\acc _ -> acc)
 
@@ -208,6 +219,11 @@ This needs to be used in conjunction with `define` and `endFolder2`:
     --> 7
 
 -}
+folder2 :
+    (a1 -> a -> c -> d)
+    -> ((c -> ( a1, b1 ) -> ( a, b ) -> e) -> f)
+    -> (d -> b1 -> b -> e)
+    -> f
 folder2 =
     let
         folder2_ foldHead foldTail accForHead tuple1 tuple2 =
@@ -222,6 +238,7 @@ folder2 =
 
 {-| Complete the definition of a `folder2`.
 -}
+endFolder2 : ((a -> b -> c -> a) -> d) -> d
 endFolder2 =
     end (\acc _ _ -> acc)
 
@@ -244,6 +261,11 @@ This needs to be used in conjunction with `define` and `endFolder3`:
     --> 13.5
 
 -}
+folder3 :
+    (a2 -> a1 -> a -> c -> d)
+    -> ((c -> ( a2, b2 ) -> ( a1, b1 ) -> ( a, b ) -> e) -> f)
+    -> (d -> b2 -> b1 -> b -> e)
+    -> f
 folder3 =
     let
         folder3_ foldHead foldTail accForHead tuple1 tuple2 tuple3 =
@@ -258,6 +280,7 @@ folder3 =
 
 {-| Complete the definition of a `folder3`.
 -}
+endFolder3 : ((a -> b -> c -> d -> a) -> e) -> e
 endFolder3 =
     end (\acc _ _ _ -> acc)
 
@@ -281,6 +304,7 @@ This needs to be used in conjunction with `define` and `endMapper`:
     --> ( 2, ( 3.0, () ) )
 
 -}
+mapper : (a -> c) -> ((( a, b ) -> ( c, d )) -> e) -> (b -> d) -> e
 mapper =
     let
         mapper_ fHead fTail a =
@@ -293,6 +317,7 @@ mapper =
 
 {-| Complete the definition of a `mapper`.
 -}
+endMapper : ((a -> ()) -> b) -> b
 endMapper =
     end (\_ -> empty)
 
@@ -313,6 +338,11 @@ This needs to be used in conjunction with `define` and `endMapper2`:
     --> ( 3, ( 4.0, () ) )
 
 -}
+mapper2 :
+    (a1 -> a -> c)
+    -> ((( a1, b1 ) -> ( a, b ) -> ( c, d )) -> e)
+    -> (b1 -> b -> d)
+    -> e
 mapper2 =
     let
         mapper2_ fHead fTail a b =
@@ -325,6 +355,7 @@ mapper2 =
 
 {-| Complete the definition of a `mapper2`.
 -}
+endMapper2 : ((a -> b -> ()) -> c) -> c
 endMapper2 =
     end (\_ _ -> empty)
 
@@ -346,6 +377,11 @@ This needs to be used in conjunction with `define` and `endMapper3`:
     --> ( 6, ( 7.5, () ) )
 
 -}
+mapper3 :
+    (a2 -> a1 -> a -> c)
+    -> ((( a2, b2 ) -> ( a1, b1 ) -> ( a, b ) -> ( c, d )) -> e)
+    -> (b2 -> b1 -> b -> d)
+    -> e
 mapper3 =
     let
         mapper3_ fHead fTail a b c =
@@ -358,6 +394,7 @@ mapper3 =
 
 {-| Complete the definition of a `mapper3`.
 -}
+endMapper3 : ((a -> b -> c -> ()) -> d) -> d
 endMapper3 =
     end (\_ _ _ -> empty)
 
@@ -368,6 +405,7 @@ endMapper3 =
 
 {-| Begin the definition of a tuple of `getters`.
 -}
+defineGetters : { get : a1 -> a1, getters : a -> a }
 defineGetters =
     { get = identity
     , getters = identity
@@ -386,6 +424,9 @@ This needs to be used in conjunction with `defineGetters` and `endGetters`:
     --> ( \tuple -> tuple |> Tuple.first, ( \tuple -> tuple |> Tuple.second |> Tuple.first, () ) )
 
 -}
+getter :
+    { get : b -> c1, getters : ( ( b, b1 ) -> c1, a ) -> c }
+    -> { get : ( a1, b ) -> c1, getters : a -> c }
 getter prev =
     { get = prev.get << tail
     , getters = prev.getters << cons (prev.get << head)
@@ -394,12 +435,14 @@ getter prev =
 
 {-| Complete the definition of a tuple of `getters`.
 -}
+endGetters : { b | getters : () -> a } -> a
 endGetters prev =
     prev.getters empty
 
 
 {-| Begin the definition of a tuple of `setters`.
 -}
+defineSetters : { set : a1 -> a1, setters : a -> a }
 defineSetters =
     { set = identity
     , setters = identity
@@ -418,6 +461,9 @@ This needs to be used in conjunction with `defineSetters` and `endSetters`:
     --> ( \value tuple -> tuple |> Tuple.mapFirst (always value), ( \value tuple -> tuple |> Tuple.mapSecond |> Tuple.mapFirst (always value), () ) )
 
 -}
+setter :
+    { set : (( a1, b ) -> ( a1, b )) -> c1, setters : ( a1 -> c1, a ) -> c }
+    -> { set : (b -> b) -> c1, setters : a -> c }
 setter prev =
     { set = prev.set << mapTail
     , setters = prev.setters << cons (prev.set << mapHead << always)
@@ -426,6 +472,7 @@ setter prev =
 
 {-| Complete the definition of a tuple of `setters`.
 -}
+endSetters : { b | setters : () -> a } -> a
 endSetters prev =
     prev.setters empty
 
