@@ -36,17 +36,13 @@ add component { emptyAppMsg, setters, updater, viewer, init } =
         NT.folder2
             (\insertComposerMsg componentModel ( views, emptyAppMsg_ ) ->
                 let
-                    toAppMsg componentMsg =
-                        let
-                            composerMsg =
-                                ComponentMsg componentMsg
-                        in
-                        insertComposerMsg composerMsg emptyAppMsg_
+                    componentMsgToAppMsg componentMsg =
+                        insertComposerMsg (ComponentMsg componentMsg) emptyAppMsg_
 
                     view =
                         componentModel
                             |> component.view
-                            |> Html.map toAppMsg
+                            |> Html.map componentMsgToAppMsg
                 in
                 ( view :: views
                 , emptyAppMsg_
