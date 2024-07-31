@@ -307,9 +307,9 @@ This needs to be used in conjunction with `define` and `endFolder`:
 -}
 folder :
     (head -> accForHead -> accForTail)
-    -> ((accForHead -> ( head, tail ) -> foldedTail) -> foldedHead)
-    -> (accForTail -> tail -> foldedTail)
-    -> foldedHead
+    -> ((accForHead -> ( head, tail ) -> accForNext) -> folder)
+    -> (accForTail -> tail -> accForNext)
+    -> folder
 folder =
     let
         folder_ foldHead foldTail accForHead tuple =
@@ -324,7 +324,7 @@ folder =
 
 {-| Complete the definition of a `folder`.
 -}
-endFolder : ((a -> () -> a) -> c) -> c
+endFolder : ((acc -> empty -> acc) -> folder) -> folder
 endFolder =
     end (\acc _ -> acc)
 
@@ -347,10 +347,10 @@ This needs to be used in conjunction with `define` and `endFolder2`:
 
 -}
 folder2 :
-    (a1 -> a -> c -> d)
-    -> ((c -> ( a1, b1 ) -> ( a, b ) -> e) -> f)
-    -> (d -> b1 -> b -> e)
-    -> f
+    (headA -> headB -> accForHead -> accForTail)
+    -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> accForNext) -> folder2)
+    -> (accForTail -> tailA -> tailB -> accForNext)
+    -> folder2
 folder2 =
     let
         folder2_ foldHead foldTail accForHead tuple1 tuple2 =
@@ -365,7 +365,7 @@ folder2 =
 
 {-| Complete the definition of a `folder2`.
 -}
-endFolder2 : ((a -> b -> c -> a) -> d) -> d
+endFolder2 : ((acc -> empty -> empty -> acc) -> folder2) -> folder2
 endFolder2 =
     end (\acc _ _ -> acc)
 
@@ -389,10 +389,10 @@ This needs to be used in conjunction with `define` and `endFolder3`:
 
 -}
 folder3 :
-    (a2 -> a1 -> a -> c -> d)
-    -> ((c -> ( a2, b2 ) -> ( a1, b1 ) -> ( a, b ) -> e) -> f)
-    -> (d -> b2 -> b1 -> b -> e)
-    -> f
+    (headA -> headB -> headC -> accForHead -> accForTail)
+    -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> accForNext) -> folder3)
+    -> (accForTail -> tailA -> tailB -> tailC -> accForNext)
+    -> folder3
 folder3 =
     let
         folder3_ foldHead foldTail accForHead tuple1 tuple2 tuple3 =
@@ -407,7 +407,7 @@ folder3 =
 
 {-| Complete the definition of a `folder3`.
 -}
-endFolder3 : ((a -> b -> c -> d -> a) -> e) -> e
+endFolder3 : ((acc -> empty -> empty -> empty -> acc) -> folder3) -> folder3
 endFolder3 =
     end (\acc _ _ _ -> acc)
 
@@ -418,7 +418,7 @@ endFolder3 =
 
 {-| Begin the definition of a tuple of `getters`.
 -}
-defineGetters : { get : a1 -> a1, getters : a -> a }
+defineGetters : { get : get -> get, getters : getters -> getters }
 defineGetters =
     { get = identity
     , getters = identity
@@ -438,8 +438,13 @@ This needs to be used in conjunction with `defineGetters` and `endGetters`:
 
 -}
 getter :
-    { get : b -> c1, getters : ( ( b, b1 ) -> c1, a ) -> c }
-    -> { get : ( a1, b ) -> c1, getters : a -> c }
+    { get : b -> c1
+    , getters : ( ( b, b1 ) -> c1, a ) -> c
+    }
+    ->
+        { get : ( a1, b ) -> c1
+        , getters : a -> c
+        }
 getter prev =
     { get = prev.get << tail
     , getters = prev.getters << cons (prev.get << head)
@@ -455,7 +460,7 @@ endGetters prev =
 
 {-| Begin the definition of a tuple of `setters`.
 -}
-defineSetters : { set : a1 -> a1, setters : a -> a }
+defineSetters : { set : set -> set, setters : setters -> setters }
 defineSetters =
     { set = identity
     , setters = identity
@@ -475,8 +480,13 @@ This needs to be used in conjunction with `defineSetters` and `endSetters`:
 
 -}
 setter :
-    { set : (( a1, b ) -> ( a1, b )) -> c1, setters : ( a1 -> c1, a ) -> c }
-    -> { set : (b -> b) -> c1, setters : a -> c }
+    { set : (( head, tail ) -> ( head, tail )) -> set
+    , setters : ( head -> set, nextSetters ) -> setters
+    }
+    ->
+        { set : (tail -> tail) -> set
+        , setters : nextSetters -> setters
+        }
 setter prev =
     { set = prev.set << mapTail
     , setters = prev.setters << cons (prev.set << mapHead << always)
