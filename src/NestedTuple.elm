@@ -142,6 +142,8 @@ define =
 
 This needs to be used in conjunction with `define` and `endAppender`:
 
+    import NestedTuple exposing (define, appender, endAppender)
+
     define
         |> appender 1
         |> endAppender
@@ -175,6 +177,8 @@ endAppender prev =
 {-| Create a `mapper` for a nested tuple by defining a map functions for each element of the tuple.
 
 This needs to be used in conjunction with `define` and `endMapper`:
+
+    import NestedTuple exposing (define, mapper, endMapper)
 
     double =
         define
@@ -213,6 +217,8 @@ endMapper =
 
 This needs to be used in conjunction with `define` and `endMapper2`:
 
+    import NestedTuple exposing (define, mapper2, endMapper2)
+
     add =
         define
             |> mapper2 (\int1 int2 -> int1 + int2)
@@ -250,6 +256,8 @@ endMapper2 =
 {-| Create a `mapper` for three nested tuples by defining map functions for each element of the tuples.
 
 This needs to be used in conjunction with `define` and `endMapper3`:
+
+    import NestedTuple exposing (define, mapper3, endMapper3)
 
     add =
         define
@@ -294,15 +302,17 @@ endMapper3 =
 
 This needs to be used in conjunction with `define` and `endFolder`:
 
+    import NestedTuple exposing (define, folder, endFolder)
+
     sum =
         define
-            |> folder (\int acc -> toFloat int + acc)
-            |> folder (\float acc -> float + acc)
+            |> folder (\int acc -> int + acc)
+            |> folder (\str acc -> String.length str + acc)
             |> endFolder
 
-    sum 0 ( 1, ( 1.5, () ) )
+    sum 0 ( 1, ( "foo", () ) )
 
-    --> 2.5
+    --> 4
 
 -}
 folder :
@@ -333,17 +343,19 @@ endFolder =
 
 This needs to be used in conjunction with `define` and `endFolder2`:
 
+    import NestedTuple exposing (define, folder2, endFolder2)
+
     sum =
         define
-            |> folder2 (\int1 int2 acc -> toFloat (int1 + int2) + acc)
-            |> folder2 (\float1 float2 acc -> float1 + float2 + acc)
+            |> folder2 (\int1 int2 acc -> int1 + int2 + acc)
+            |> folder2 (\str1 str2 acc -> String.length (str1 ++ str2) + acc)
             |> endFolder2
 
     sum 0
-        ( 1, ( 1.5, () ) )
-        ( 2, ( 2.5, () ) )
+        ( 1, ( "foo", () ) )
+        ( 2, ( "bar", () ) )
 
-    --> 7
+    --> 9
 
 -}
 folder2 :
@@ -374,18 +386,20 @@ endFolder2 =
 
 This needs to be used in conjunction with `define` and `endFolder3`:
 
+    import NestedTuple exposing (define, folder3, endFolder3)
+
     sum =
         define
-            |> folder3 (\int1 int2 int3 acc -> toFloat (int1 + int2 + int3) + acc)
-            |> folder3 (\float1 float2 float3 acc -> float1 + float2 + float3 + acc)
-            |> endFolder2
+            |> folder3 (\int1 int2 int3 acc -> int1 + int2 + int3 + acc)
+            |> folder3 (\str1 str2 str3 acc -> String.length (str1 ++ str2 ++ str3) + acc)
+            |> endFolder3
 
     sum 0
-        ( 1, ( 1.5, () ) )
-        ( 2, ( 2.5, () ) )
-        ( 3, ( 3.5, () ) )
+        ( 1, ( "foo", () ) )
+        ( 2, ( "bar", () ) )
+        ( 3, ( "baz", () ) )
 
-    --> 13.5
+    --> 15
 
 -}
 folder3 :
@@ -432,12 +446,18 @@ defineGetters =
 
 This needs to be used in conjunction with `defineGetters` and `endGetters`:
 
+    import NestedTuple exposing (defineGetters, getter, endGetters)
+
     defineGetters
         |> getter
         |> getter
         |> endGetters
 
-    --> ( \tuple -> tuple |> Tuple.first, ( \tuple -> tuple |> Tuple.second |> Tuple.first, () ) )
+    --: ( ( a, ( b, () ) ) -> a
+        , ( ( a, ( b, () ) ) -> b
+          , () 
+          ) 
+        )
 
 -}
 getter :
@@ -488,27 +508,20 @@ defineSetters =
 
 This needs to be used in conjunction with `defineSetters` and `endSetters`:
 
+    import NestedTuple exposing (defineSetters, setter, endSetters)
+
     defineSetters
         |> setter
         |> setter
         |> endSetters
 
-    --> ( \value tuple -> tuple |> Tuple.mapFirst (always value), ( \value tuple -> tuple |> Tuple.mapSecond |> Tuple.mapFirst (always value), () ) )
+    --: ( a -> ( a, ( b, () ) ) -> ( a, ( b, () ) )
+        , ( b -> ( a, ( b, () ) ) -> ( a, ( b, () ) )
+          , () 
+          ) 
+        )
 
 -}
-
-
-
--- setter :
---     { focus : (( head, tail ) -> ( head, tail )) -> set
---     , appendToSetters : ( head -> set, nextSetters ) -> setters
---     }
---     ->
---         { focus : (tail -> tail) -> set
---         , appendToSetters : nextSetters -> setters
---         }
-
-
 setter :
     { appendToSetters : ( head -> tuple -> tuple, nextSetters ) -> setters
     , focus : (( head, tail ) -> ( head, tail )) -> tuple -> tuple
