@@ -1,10 +1,10 @@
 {
     "type": "package",
-    "name": "elm-nested-tuples",
+    "name": "edkelly303/elm-nested-tuples",
     "summary": "Work with nested tuples more easily",
     "version": "1.0.0",
     "license": "BSD-3-Clause",
-    "elm-version": "0.19.1",
+    "elm-version": "0.19.1 <= v < 0.20.0",
     "source-directories": [
         "src"
     ],
