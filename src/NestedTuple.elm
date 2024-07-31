@@ -1,24 +1,28 @@
 module NestedTuple exposing
-    ( accessors
+    ( appender
     , cons
     , define
-    , defineAccessors
+    , defineGetters
+    , defineSetters
     , empty
-    , endAccessors
-    , endFold
-    , endFold2
-    , endMap
-    , endMap2
-    , endMap3
-    , fold
-    , fold2
+    , endAppender
+    , endFolder
+    , endFolder2
+    , endGetters
+    , endMapper
+    , endMapper2
+    , endMapper3
+    , endSetters
+    , folder
+    , folder2
+    , getter
     , head
-    , map
-    , map2
-    , map3
-    , mapBoth
     , mapHead
     , mapTail
+    , mapper
+    , mapper2
+    , mapper3
+    , setter
     , singleton
     , tail
     )
@@ -49,6 +53,10 @@ tail =
     Tuple.second
 
 
+
+-- Utility functions
+
+
 singleton a =
     cons a empty
 
@@ -65,14 +73,28 @@ mapTail f tuple =
         (f (tail tuple))
 
 
-mapBoth headF tailF tuple =
-    cons
-        (headF (head tuple))
-        (tailF (tail tuple))
+
+-- Defining mappers, folders etc.
 
 
 define =
     identity
+
+
+
+-- Appenders
+
+
+appender value prev next =
+    prev ( value, next )
+
+
+endAppender prev =
+    prev empty
+
+
+
+-- Folders
 
 
 {-| Define a "folder" for nested tuples of a particular type
@@ -91,98 +113,122 @@ define =
     --> 6
 
 -}
-fold =
+folder =
     let
-        flip f arg1 arg2 =
-            f arg2 arg1
-
-        folder foldHead foldTail acc tuple =
-            acc
-                |> foldHead (head tuple)
-                |> flip foldTail (tail tuple)
+        folder_ foldHead foldTail acc tuple =
+            let
+                acc2 =
+                    foldHead (head tuple) acc
+            in
+            foldTail acc2 (tail tuple)
     in
-    do folder
+    do folder_
 
 
-fold2 =
+endFolder =
+    end (\acc _ -> acc)
+
+
+folder2 =
     let
-        folder foldHead foldTail acc tuple1 tuple2 =
+        folder2_ foldHead foldTail acc tuple1 tuple2 =
             let
                 acc2 =
                     foldHead (head tuple1) (head tuple2) acc
             in
             foldTail acc2 (tail tuple1) (tail tuple2)
     in
-    do folder
+    do folder2_
 
 
-endFold =
-    end (\acc _ -> acc)
-
-
-endFold2 =
+endFolder2 =
     end (\acc _ _ -> acc)
 
 
-map =
-    do mapBoth
+
+-- Mappers
 
 
-endMap =
+mapper =
+    let
+        mapper_ fHead fTail a =
+            a
+                |> mapHead fHead
+                |> mapTail fTail
+    in
+    do mapper_
+
+
+endMapper =
     end (\_ -> empty)
 
 
-map2 =
+mapper2 =
     let
-        mapper2 map2Head map2Tail a b =
+        mapper2_ fHead fTail a b =
             cons
-                (map2Head (head a) (head b))
-                (map2Tail (tail a) (tail b))
+                (fHead (head a) (head b))
+                (fTail (tail a) (tail b))
     in
-    do mapper2
+    do mapper2_
 
 
-endMap2 =
+endMapper2 =
     end (\_ _ -> empty)
 
 
-map3 =
+mapper3 =
     let
-        mapper2 map3Head map3Tail a b c =
+        mapper3_ fHead fTail a b c =
             cons
-                (map3Head (head a) (head b) (head c))
-                (map3Tail (tail a) (tail b) (tail c))
+                (fHead (head a) (head b) (head c))
+                (fTail (tail a) (tail b) (tail c))
     in
-    do mapper2
+    do mapper3_
 
 
-endMap3 =
+endMapper3 =
     end (\_ _ _ -> empty)
 
 
-defineAccessors =
+
+-- Getters and setters
+
+
+defineGetters =
     { get = identity
-    , set = identity
     , getters = identity
-    , setters = identity
-    , updaters = identity
     }
 
 
-accessors prev =
+getter prev =
     { get = prev.get << tail
-    , set = prev.set << mapTail
     , getters = prev.getters << cons (prev.get << head)
+    }
+
+
+endGetters prev =
+    prev.getters empty
+
+
+defineSetters =
+    { set = identity
+    , setters = identity
+    }
+
+
+setter prev =
+    { set = prev.set << mapTail
     , setters = prev.setters << cons (prev.set << mapHead << always)
-    , updaters = prev.updaters << cons (prev.set << mapHead)
     }
 
 
-endAccessors prev =
-    { getters = prev.getters empty
-    , setters = prev.setters empty
-    , updaters = prev.updaters empty
-    }
+endSetters prev =
+    prev.setters empty
+
+
+
+-- Magic
 
 
 do doer doThis doPrev =
