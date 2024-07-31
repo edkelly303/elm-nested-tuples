@@ -8,6 +8,7 @@ module NestedTuple exposing
     , endAppender
     , endFolder
     , endFolder2
+    , endFolder3
     , endGetters
     , endMapper
     , endMapper2
@@ -15,6 +16,7 @@ module NestedTuple exposing
     , endSetters
     , folder
     , folder2
+    , folder3
     , getter
     , head
     , mapHead
@@ -74,7 +76,7 @@ mapTail f tuple =
 
 
 
--- Defining mappers, folders etc.
+-- Define appenders, mappers, folders etc.
 
 
 define =
@@ -82,7 +84,7 @@ define =
 
 
 
--- Appenders
+-- Appender
 
 
 appender value prev next =
@@ -97,30 +99,14 @@ endAppender prev =
 -- Folders
 
 
-{-| Define a "folder" for nested tuples of a particular type
-
-    tuple =
-        ( 1, ( "hello", () ) )
-
-    myFolder =
-        define
-            |> fold (\\n acc -> n + acc)
-            |> fold (\\s acc -> String.length s + acc)
-            |> endFold
-
-    myFolder 0 tuple
-
-    --> 6
-
--}
 folder =
     let
-        folder_ foldHead foldTail acc tuple =
+        folder_ foldHead foldTail accForHead tuple =
             let
-                acc2 =
-                    foldHead (head tuple) acc
+                accForTail =
+                    foldHead (head tuple) accForHead
             in
-            foldTail acc2 (tail tuple)
+            foldTail accForTail (tail tuple)
     in
     do folder_
 
@@ -131,18 +117,34 @@ endFolder =
 
 folder2 =
     let
-        folder2_ foldHead foldTail acc tuple1 tuple2 =
+        folder2_ foldHead foldTail accForHead tuple1 tuple2 =
             let
-                acc2 =
-                    foldHead (head tuple1) (head tuple2) acc
+                accForTail =
+                    foldHead (head tuple1) (head tuple2) accForHead
             in
-            foldTail acc2 (tail tuple1) (tail tuple2)
+            foldTail accForTail (tail tuple1) (tail tuple2)
     in
     do folder2_
 
 
 endFolder2 =
     end (\acc _ _ -> acc)
+
+
+folder3 =
+    let
+        folder3_ foldHead foldTail accForHead tuple1 tuple2 tuple3 =
+            let
+                accForTail =
+                    foldHead (head tuple1) (head tuple2) (head tuple3) accForHead
+            in
+            foldTail accForTail (tail tuple1) (tail tuple2) (tail tuple3)
+    in
+    do folder3_
+
+
+endFolder3 =
+    end (\acc _ _ _ -> acc)
 
 
 
@@ -152,9 +154,9 @@ endFolder2 =
 mapper =
     let
         mapper_ fHead fTail a =
-            a
-                |> mapHead fHead
-                |> mapTail fTail
+            cons
+                (fHead (head a))
+                (fTail (tail a))
     in
     do mapper_
 
