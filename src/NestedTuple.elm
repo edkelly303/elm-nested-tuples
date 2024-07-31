@@ -80,8 +80,8 @@ empty =
 {-| Prepend a value to a nested tuple.
 -}
 cons : head -> tail -> ( head, tail )
-cons a tuple =
-    ( a, tuple )
+cons =
+    Tuple.pair
 
 
 {-| Get the head (first element) of a nested tuple.
