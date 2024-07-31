@@ -34,12 +34,14 @@ add component prev =
             prev.updater
     , viewer =
         NT.folder2
-            (\msgMapper model ( listOfViews, emptyMsg ) ->
-                ( (model
-                    |> component.view
-                    |> Html.map (\msg -> msgMapper (Msg msg) emptyMsg)
-                  )
-                    :: listOfViews
+            (\msgMapper model ( views, emptyMsg ) ->
+                let
+                    view =
+                        model
+                            |> component.view
+                            |> Html.map (\msg -> msgMapper (Msg msg) emptyMsg)
+                in
+                ( view :: views
                 , emptyMsg
                 )
             )
@@ -52,15 +54,15 @@ add component prev =
 end prev =
     { init = NT.endAppender prev.init
     , view =
-        \states ->
+        \model ->
             let
                 msgMappers =
                     NT.endSetters prev.setters
 
-                collectViews =
+                collectAllViews =
                     NT.endFolder2 prev.viewer
             in
-            collectViews ( [], prev.emptyMsg ) msgMappers states
+            collectAllViews ( [], prev.emptyMsg ) msgMappers model
                 |> Tuple.first
                 |> List.reverse
                 |> Html.div []
