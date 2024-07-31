@@ -1,10 +1,9 @@
 module Main exposing (..)
 
 import Browser
-import Html exposing (Html, button, div, text)
-import Html.Attributes
-import Html.Events exposing (onClick, onInput)
-import NestedTuple as NT
+import Composer
+import Html
+import Html.Events
 
 
 main : Program () ComponentsModel ComponentsMsg
@@ -17,119 +16,51 @@ type alias ComponentsModel =
 
 
 type alias ComponentsMsg =
-    ( Msg CounterMsg, ( Msg String, () ) )
+    ( Composer.Msg CounterMsg, ( Composer.Msg TextMsg, () ) )
 
 
 components =
-    start
-        |> add counter
-        |> add textInput
-        |> end
+    Composer.start
+        |> Composer.add counter
+        |> Composer.add textInput
+        |> Composer.end
 
 
 type CounterMsg
-    = Inc
-    | Dec
+    = Increment
 
 
 counter =
     { init = 0
     , update =
-        \msg state ->
+        \msg model ->
             case msg of
-                Inc ->
-                    state + 1
-
-                Dec ->
-                    state - 1
+                Increment ->
+                    model + 1
     , view =
-        \state ->
+        \model ->
             Html.button
-                [ onClick Inc ]
-                [ Html.text (String.fromInt state) ]
+                [ Html.Events.onClick Increment ]
+                [ Html.text (String.fromInt model) ]
     }
+
+
+type TextMsg
+    = TextChanged String
 
 
 textInput =
     { init = ""
-    , update = \msg state -> msg
-    , view =
-        \state ->
-            Html.div
-                []
-                [ Html.input [ onInput identity ] [ Html.text state ]
-                , Html.text state
-                ]
-    }
-
-
-start =
-    { emptyMsg = NT.empty
-    , accessors = NT.defineAccessors
-    , updater = NT.define
-    , viewer = NT.define
-    , init = NT.define
-    }
-
-
-type Msg msg
-    = NoMsg
-    | Msg msg
-
-
-add component builder =
-    { emptyMsg = NT.cons NoMsg builder.emptyMsg
-    , accessors = NT.accessors builder.accessors
-    , updater =
-        NT.map2
-            (\msg model ->
-                case msg of
-                    Msg msg_ ->
-                        component.update msg_ model
-
-                    NoMsg ->
-                        model
-            )
-            builder.updater
-    , viewer =
-        NT.fold2
-            (\msgMapper model ( listOfViews, emptyMsg ) ->
-                ( (model
-                    |> component.view
-                    |> Html.map (\msg -> msgMapper (Msg msg) emptyMsg)
-                  )
-                    :: listOfViews
-                , emptyMsg
-                )
-            )
-            builder.viewer
-    , init =
-        builder.init << NT.cons component.init
-    }
-
-
-end builder =
-    { init = builder.init NT.empty
-    , view =
-        \states ->
-            let
-                setters =
-                    builder.accessors
-                        |> NT.endAccessors
-                        |> .setters
-
-                viewFolder =
-                    NT.endFold2 builder.viewer
-            in
-            viewFolder ( [], builder.emptyMsg ) setters states
-                |> Tuple.first
-                |> List.reverse
-                |> Html.div []
     , update =
         \msg model ->
-            let
-                updateMapper =
-                    NT.endMap2 builder.updater
-            in
-            updateMapper msg model
+            case msg of
+                TextChanged str ->
+                    str
+    , view =
+        \model ->
+            Html.div
+                []
+                [ Html.input [ Html.Events.onInput TextChanged ] [ Html.text model ]
+                , Html.text model
+                ]
     }
