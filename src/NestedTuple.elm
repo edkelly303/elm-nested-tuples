@@ -158,7 +158,7 @@ This needs to be used in conjunction with `define` and `endAppender`:
 -}
 appender : head -> (( head, tail ) -> tuple) -> tail -> tuple
 appender value prev next =
-    prev ( value, next )
+    prev (cons value next)
 
 
 {-| Complete the definition of an `appender`.
