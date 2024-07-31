@@ -9,10 +9,10 @@ myTuple =
 
 myMapper =
     define
-        |> map (\n -> n / 2.0)
-        |> map (\n -> n * 2)
-        |> map (\s -> s ++ s)
-        |> endMap
+        |> mapper (\n -> n / 2.0)
+        |> mapper (\n -> n * 2)
+        |> mapper (\s -> s ++ s)
+        |> endMapper
 
 
 mapped =
@@ -21,10 +21,10 @@ mapped =
 
 myFolder =
     define
-        |> fold (\n acc -> round n + acc)
-        |> fold (\n acc -> n + acc)
-        |> fold (\s acc -> String.length s + acc)
-        |> endFold
+        |> folder (\n acc -> round n + acc)
+        |> folder (\n acc -> n + acc)
+        |> folder (\s acc -> String.length s + acc)
+        |> endFolder
 
 
 folded =
@@ -33,10 +33,10 @@ folded =
 
 myFolder2 =
     define
-        |> fold2 (\n1 n2 acc -> round (n1 + n2) + acc)
-        |> fold2 (\n1 n2 acc -> n1 + n2 + acc)
-        |> fold2 (\s1 s2 acc -> String.length (s1 ++ s2) + acc)
-        |> endFold2
+        |> folder2 (\n1 n2 acc -> round (n1 + n2) + acc)
+        |> folder2 (\n1 n2 acc -> n1 + n2 + acc)
+        |> folder2 (\s1 s2 acc -> String.length (s1 ++ s2) + acc)
+        |> endFolder2
 
 
 folded2 =
@@ -45,10 +45,10 @@ folded2 =
 
 myMapper2 =
     define
-        |> map2 (\a b -> a / b)
-        |> map2 (\a b -> a + b)
-        |> map2 (\a b -> String.length (a ++ b))
-        |> endMap2
+        |> mapper2 (\a b -> a / b)
+        |> mapper2 (\a b -> a + b)
+        |> mapper2 (\a b -> String.length (a ++ b))
+        |> endMapper2
 
 
 mapped2 =
@@ -57,39 +57,11 @@ mapped2 =
 
 myMapper3 =
     define
-        |> map3 (\a b c -> a / b / c)
-        |> map3 (\a b c -> a + b + c)
-        |> map3 (\a b c -> String.length (a ++ b ++ c))
-        |> endMap3
+        |> mapper3 (\a b c -> a / b / c)
+        |> mapper3 (\a b c -> a + b + c)
+        |> mapper3 (\a b c -> String.length (a ++ b ++ c))
+        |> endMapper3
 
 
 mapped3 =
     myMapper3 myTuple myTuple myTuple
-
-
-getSet =
-    defineAccessors
-        |> accessors
-        |> accessors
-        |> accessors
-        |> endAccessors
-
-
-myHead =
-    let
-        firstGetter =
-            head getSet.getters
-    in
-    firstGetter myTuple
-
-
-setTuple =
-    let
-        folder =
-            define
-                |> fold (\setter acc -> setter 3.5 acc)
-                |> fold (\setter acc -> setter 3 acc)
-                |> fold (\setter acc -> setter "world" acc)
-                |> endFold
-    in
-    folder myTuple getSet.setters
