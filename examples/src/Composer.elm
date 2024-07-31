@@ -5,7 +5,7 @@ import NestedTuple as NT
 
 
 start =
-    { emptyMsg = NT.empty
+    { emptyAppMsg = NT.empty
     , setters = NT.defineSetters
     , updater = NT.define
     , viewer = NT.define
@@ -14,63 +14,70 @@ start =
 
 
 type Msg msg
-    = NoMsg
-    | Msg msg
+    = NoComponentMsg
+    | ComponentMsg msg
 
 
-add component prev =
-    { emptyMsg = NT.cons NoMsg prev.emptyMsg
-    , setters = NT.setter prev.setters
+add component { emptyAppMsg, setters, updater, viewer, init } =
+    { emptyAppMsg = NT.cons NoComponentMsg emptyAppMsg
+    , setters = NT.setter setters
     , updater =
         NT.mapper2
-            (\msg model ->
-                case msg of
-                    Msg msg_ ->
-                        component.update msg_ model
+            (\composerMsg componentModel ->
+                case composerMsg of
+                    ComponentMsg componentMsg ->
+                        component.update componentMsg componentModel
 
-                    NoMsg ->
-                        model
+                    NoComponentMsg ->
+                        componentModel
             )
-            prev.updater
+            updater
     , viewer =
         NT.folder2
-            (\msgMapper model ( views, emptyMsg ) ->
+            (\insertComposerMsg componentModel ( views, emptyAppMsg_ ) ->
                 let
+                    toAppMsg componentMsg =
+                        let
+                            composerMsg =
+                                ComponentMsg componentMsg
+                        in
+                        insertComposerMsg composerMsg emptyAppMsg_
+
                     view =
-                        model
+                        componentModel
                             |> component.view
-                            |> Html.map (\msg -> msgMapper (Msg msg) emptyMsg)
+                            |> Html.map toAppMsg
                 in
                 ( view :: views
-                , emptyMsg
+                , emptyAppMsg_
                 )
             )
-            prev.viewer
+            viewer
     , init =
-        NT.appender component.init prev.init
+        NT.appender component.init init
     }
 
 
-end prev =
-    { init = NT.endAppender prev.init
+end components =
+    { init = NT.endAppender components.init
     , view =
         \model ->
             let
-                msgMappers =
-                    NT.endSetters prev.setters
+                composerMsgInserters =
+                    NT.endSetters components.setters
 
                 collectAllViews =
-                    NT.endFolder2 prev.viewer
+                    NT.endFolder2 components.viewer
             in
-            collectAllViews ( [], prev.emptyMsg ) msgMappers model
+            collectAllViews ( [], components.emptyAppMsg ) composerMsgInserters model
                 |> Tuple.first
                 |> List.reverse
                 |> Html.div []
     , update =
         \msg model ->
             let
-                updateAllElements =
-                    NT.endMapper2 prev.updater
+                updateAllComponents =
+                    NT.endMapper2 components.updater
             in
-            updateAllElements msg model
+            updateAllComponents msg model
     }
