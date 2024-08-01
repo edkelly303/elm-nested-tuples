@@ -558,9 +558,11 @@ endSetters { appendToSetters } =
 -- Magic
 
 
+do : (doThis -> doRest -> todoPrev) -> doThis -> (todoPrev -> done) -> doRest -> done
 do doer doThis doPrev =
     \doRest -> doPrev (doer doThis doRest)
 
 
+end : ender -> (ender -> done) -> done
 end ender prev =
     prev ender
