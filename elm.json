@@ -3,7 +3,7 @@
     "name": "edkelly303/elm-nested-tuples",
     "summary": "Work with nested tuples more easily",
     "license": "BSD-3-Clause",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "exposed-modules": [
         "NestedTuple"
     ],
