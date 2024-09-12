@@ -158,14 +158,14 @@ This needs to be used in conjunction with `define` and `endAppender`:
     --> ( "hello", ( "world", () ) )
 
 -}
-appender : head -> (( head, tail ) -> tuple) -> tail -> tuple
+appender : head -> (( head, tail ) -> toAppender) -> tail -> toAppender
 appender value prev next =
     prev (cons value next)
 
 
 {-| Complete the definition of an `appender`.
 -}
-endAppender : (() -> tuple) -> tuple
+endAppender : (() -> appender) -> appender
 endAppender prev =
     prev empty
 
@@ -193,9 +193,9 @@ This needs to be used in conjunction with `define` and `endMapper`:
 -}
 mapper :
     (headA -> headB)
-    -> ((( headA, tailA ) -> ( headB, tailB )) -> tuple)
+    -> ((( headA, tailA ) -> ( headB, tailB )) -> toMapper)
     -> (tailA -> tailB)
-    -> tuple
+    -> toMapper
 mapper =
     let
         mapper_ fHead fTail a =
@@ -208,7 +208,7 @@ mapper =
 
 {-| Complete the definition of a `mapper`.
 -}
-endMapper : ((() -> ()) -> tuple) -> tuple
+endMapper : ((() -> ()) -> mapper) -> mapper
 endMapper =
     end (\_ -> empty)
 
@@ -233,9 +233,9 @@ This needs to be used in conjunction with `define` and `endMapper2`:
 -}
 mapper2 :
     (headA -> headB -> headC)
-    -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC )) -> tuple)
+    -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC )) -> toMapper2)
     -> (tailA -> tailB -> tailC)
-    -> tuple
+    -> toMapper2
 mapper2 =
     let
         mapper2_ fHead fTail a b =
@@ -248,7 +248,7 @@ mapper2 =
 
 {-| Complete the definition of a `mapper2`.
 -}
-endMapper2 : ((() -> () -> ()) -> tuple) -> tuple
+endMapper2 : ((() -> () -> ()) -> mapper2) -> mapper2
 endMapper2 =
     end (\_ _ -> empty)
 
@@ -274,9 +274,9 @@ This needs to be used in conjunction with `define` and `endMapper3`:
 -}
 mapper3 :
     (headA -> headB -> headC -> headD)
-    -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> ( headD, tailD )) -> tuple)
+    -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> ( headD, tailD )) -> toMapper3)
     -> (tailA -> tailB -> tailC -> tailD)
-    -> tuple
+    -> toMapper3
 mapper3 =
     let
         mapper3_ fHead fTail a b c =
@@ -289,7 +289,7 @@ mapper3 =
 
 {-| Complete the definition of a `mapper3`.
 -}
-endMapper3 : ((() -> () -> () -> ()) -> tuple) -> tuple
+endMapper3 : ((() -> () -> () -> ()) -> mapper3) -> mapper3
 endMapper3 =
     end (\_ _ _ -> empty)
 
@@ -317,9 +317,9 @@ This needs to be used in conjunction with `define` and `endFolder`:
 -}
 folder :
     (head -> accForHead -> accForTail)
-    -> ((accForHead -> ( head, tail ) -> accForNext) -> folder)
+    -> ((accForHead -> ( head, tail ) -> accForNext) -> toFolder)
     -> (accForTail -> tail -> accForNext)
-    -> folder
+    -> toFolder
 folder =
     let
         folder_ foldHead foldTail accForHead tuple =
@@ -360,9 +360,9 @@ This needs to be used in conjunction with `define` and `endFolder2`:
 -}
 folder2 :
     (headA -> headB -> accForHead -> accForTail)
-    -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> accForNext) -> folder2)
+    -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> accForNext) -> toFolder2)
     -> (accForTail -> tailA -> tailB -> accForNext)
-    -> folder2
+    -> toFolder2
 folder2 =
     let
         folder2_ foldHead foldTail accForHead tuple1 tuple2 =
@@ -404,9 +404,9 @@ This needs to be used in conjunction with `define` and `endFolder3`:
 -}
 folder3 :
     (headA -> headB -> headC -> accForHead -> accForTail)
-    -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> accForNext) -> folder3)
+    -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> accForNext) -> toFolder3)
     -> (accForTail -> tailA -> tailB -> tailC -> accForNext)
-    -> folder3
+    -> toFolder3
 folder3 =
     let
         folder3_ foldHead foldTail accForHead tuple1 tuple2 tuple3 =
@@ -461,11 +461,11 @@ This needs to be used in conjunction with `defineGetters` and `endGetters`:
 
 -}
 getter :
-    { appendToGetters : ( tuple -> head, nextGetters ) -> getters
+    { appendToGetters : ( tuple -> head, nextGetters ) -> toGetters
     , focus : tuple -> ( head, tail )
     }
     ->
-        { appendToGetters : nextGetters -> getters
+        { appendToGetters : nextGetters -> toGetters
         , focus : tuple -> tail
         }
 getter { focus, appendToGetters } =
@@ -523,11 +523,11 @@ This needs to be used in conjunction with `defineSetters` and `endSetters`:
 
 -}
 setter :
-    { appendToSetters : ( head -> tuple -> tuple, nextSetters ) -> setters
+    { appendToSetters : ( head -> tuple -> tuple, nextSetters ) -> toSetters
     , focus : (( head, tail ) -> ( head, tail )) -> tuple -> tuple
     }
     ->
-        { appendToSetters : nextSetters -> setters
+        { appendToSetters : nextSetters -> toSetters
         , focus : (tail -> tail) -> tuple -> tuple
         }
 setter { focus, appendToSetters } =
@@ -558,9 +558,11 @@ endSetters { appendToSetters } =
 -- Magic
 
 
+do : (doThis -> doRest -> todoPrev) -> doThis -> (todoPrev -> done) -> doRest -> done
 do doer doThis doPrev =
     \doRest -> doPrev (doer doThis doRest)
 
 
+end : ender -> (ender -> done) -> done
 end ender prev =
     prev ender
