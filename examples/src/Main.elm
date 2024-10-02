@@ -1,29 +1,32 @@
 module Main exposing (..)
 
+import App
 import Browser
-import Composer
 import Html
 import Html.Events
 
 
-main : Program () ComponentsModel ComponentsMsg
 main =
-    Browser.sandbox components
+    Browser.sandbox app
 
 
-type alias ComponentsModel =
-    ( Int, ( String, () ) )
+type alias Model =
+    { int : Int, string : String }
 
 
-type alias ComponentsMsg =
-    ( Composer.Msg CounterMsg, ( Composer.Msg TextMsg, () ) )
-
-
-components =
-    Composer.start
-        |> Composer.add counter
-        |> Composer.add textInput
-        |> Composer.end
+app =
+    App.start
+        { init = { int = 0, string = "" }
+        , update =
+            \counterRes textRes model ->
+                { model
+                    | int = counterRes |> Result.withDefault model.int
+                    , string = textRes |> Result.withDefault model.string
+                }
+        }
+        |> App.add counter
+        |> App.add textInput
+        |> App.done
 
 
 type CounterMsg
@@ -42,6 +45,7 @@ counter =
             Html.button
                 [ Html.Events.onClick Increment ]
                 [ Html.text (String.fromInt model) ]
+    , parse = Ok
     }
 
 
@@ -58,9 +62,6 @@ textInput =
                     str
     , view =
         \model ->
-            Html.div
-                []
-                [ Html.input [ Html.Events.onInput TextChanged ] [ Html.text model ]
-                , Html.text model
-                ]
+            Html.input [ Html.Events.onInput TextChanged ] []
+    , parse = Ok
     }
