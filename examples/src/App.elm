@@ -41,11 +41,14 @@ add component { emptyComponentsMsg, setters, updater, viewer, init, parser, app 
                     componentMsgToAppMsg componentMsg =
                         insertComposerMsg (ComponentMsg componentMsg) emptyComponentsMsg_
 
+                    msgMapper =
+                        \msg -> ( Nothing, componentMsgToAppMsg msg )
+
                     view =
                         component.view componentModel
-                            |> Html.map (\msg -> ( Nothing, componentMsgToAppMsg msg ))
+                            |> Html.map msgMapper
                 in
-                ( viewCtor view
+                ( viewCtor { view = view, send = msgMapper, value = component.parse componentModel }
                 , emptyComponentsMsg_
                 )
             )

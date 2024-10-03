@@ -12,48 +12,71 @@ main =
 
 
 type alias Model =
-    { int : Int, float : Float, bool : Bool }
+    { bool : Bool }
 
 
 type Msg
-    = CheckboxClicked
+    = CheckboxClicked Bool
 
 
 app =
     App.start
-        { init = { int = 0, float = 0.0, bool = False }
+        { init = { bool = False }
         , update =
-            \counterOutput floatFieldOutput maybeMsg model ->
-                -- update user's model with output from components
-                let
-                    modelUpdatedFromComponents =
-                        { model
-                            | int = counterOutput
-                            , float = floatFieldOutput |> Maybe.withDefault model.float
-                        }
-                in
-                -- handle user's own msgs for model updates
-                case maybeMsg of
-                    Just CheckboxClicked ->
-                        { modelUpdatedFromComponents | bool = not model.bool }
+            \counterValue floatFieldValue maybeMsg model ->
+                if counterValue > 5 || floatFieldValue == Just 0.0 then
+                    { model | bool = False }
 
-                    Nothing ->
-                        modelUpdatedFromComponents
+                else
+                    case maybeMsg of
+                        Just (CheckboxClicked bool) ->
+                            { model
+                                | bool =
+                                    if counterValue > 5 || floatFieldValue == Just 0.0 then
+                                        False
+
+                                    else
+                                        bool
+                            }
+
+                        Nothing ->
+                            model
         , view =
-            \counterView floatFieldView toMsg model ->
+            \counter_ floatField_ toMsg model ->
                 Html.div []
-                    -- these two are encapsulated components
-                    [ counterView
-                    , floatFieldView
-
-                    -- this one's state lives in the user's model
-                    , Html.input
-                        [ Html.Attributes.type_ "checkbox"
-                        , Html.Attributes.checked bool
-                        , Html.Events.onCheck (\_ -> toMsg CheckboxClicked)
+                    [ Html.p []
+                        [ Html.h4 [] [ Html.text "These two views come from encapsulated components, which manage their own state" ]
+                        , Html.div [] [ counter_.view ]
+                        , Html.div [] [ floatField_.view ]
                         ]
+                    , Html.p []
+                        [ Html.h4 [] [ Html.text "By contrast, the state of this checkbox lives in the user's model" ]
+                        , Html.div []
+                            [ Html.input
+                                [ Html.Attributes.type_ "checkbox"
+                                , Html.Attributes.checked model.bool
+                                , Html.Events.onCheck (toMsg << CheckboxClicked)
+                                ]
+                                []
+                            ]
+                        , Html.small [] [ Html.text "(We have set some rules in our update function: the checkbox will always be false if the counter is > 5 or the text box contains the float value \"0.0\")" ]
+                        ]
+                    , Html.p []
+                        [ Html.h4 [] [ Html.text "Here we take a peek at the values of the components directly" ]
+                        , Html.div [] [ Html.text (Debug.toString counter_.value) ]
+                        , Html.div [] [ Html.text (Debug.toString floatField_.value) ]
+                        ]
+                    , Html.p
                         []
-                    , Html.p [] [ Html.text (Debug.toString model) ]
+                        [ Html.h4 [] [ Html.text "Here we send a message from the user's view to one of the components" ]
+                        , Html.button
+                            [ Html.Events.onClick (counter_.send Reset) ]
+                            [ Html.text "Reset counter" ]
+                        ]
+                    , Html.p []
+                        [ Html.h4 [] [ Html.text "And here's a look at our app's model - gloriously unpolluted by component state" ]
+                        , Html.text (Debug.toString model)
+                        ]
                     ]
         }
         |> App.add counter
@@ -63,6 +86,7 @@ app =
 
 type CounterMsg
     = Increment
+    | Reset
 
 
 counter =
@@ -72,6 +96,9 @@ counter =
             case msg of
                 Increment ->
                     model + 1
+
+                Reset ->
+                    0
     , view =
         \model ->
             Html.button
