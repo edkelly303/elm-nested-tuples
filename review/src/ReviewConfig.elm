@@ -31,9 +31,10 @@ import NoUnused.Exports
 import NoUnused.Parameters
 import NoUnused.Patterns
 import NoUnused.Variables
+import Review.Documentation.CodeSnippet
 import Review.Rule as Rule exposing (Rule)
 import Simplify
-import Review.Documentation.CodeSnippet
+
 
 config : List Rule
 config =

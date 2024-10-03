@@ -455,8 +455,8 @@ This needs to be used in conjunction with `defineGetters` and `endGetters`:
 
     --: ( ( a, ( b, () ) ) -> a
         , ( ( a, ( b, () ) ) -> b
-          , () 
-          ) 
+          , ()
+          )
         )
 
 -}
@@ -517,8 +517,8 @@ This needs to be used in conjunction with `defineSetters` and `endSetters`:
 
     --: ( a -> ( a, ( b, () ) ) -> ( a, ( b, () ) )
         , ( b -> ( a, ( b, () ) ) -> ( a, ( b, () ) )
-          , () 
-          ) 
+          , ()
+          )
         )
 
 -}
