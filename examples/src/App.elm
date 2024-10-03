@@ -36,17 +36,16 @@ add component { emptyComponentsMsg, setters, updater, viewer, init, parser, app 
             updater
     , viewer =
         NT.folder2
-            (\insertComposerMsg componentModel ( views, emptyComponentsMsg_ ) ->
+            (\insertComposerMsg componentModel ( viewCtor, emptyComponentsMsg_ ) ->
                 let
                     componentMsgToAppMsg componentMsg =
                         insertComposerMsg (ComponentMsg componentMsg) emptyComponentsMsg_
 
                     view =
-                        componentModel
-                            |> component.view
-                            |> Html.map componentMsgToAppMsg
+                        component.view componentModel
+                            |> Html.map (\msg -> ( Nothing, componentMsgToAppMsg msg ))
                 in
-                ( view :: views
+                ( viewCtor view
                 , emptyComponentsMsg_
                 )
             )
@@ -73,16 +72,17 @@ done builder =
 
                 collectComponentViews =
                     NT.endFolder2 builder.viewer
+
+                view =
+                    collectComponentViews
+                        ( builder.app.view, builder.emptyComponentsMsg )
+                        composerMsgInserters
+                        componentsModel
+                        |> Tuple.first
             in
-            Html.div []
-                [ collectComponentViews ( [], builder.emptyComponentsMsg ) composerMsgInserters componentsModel
-                    |> Tuple.first
-                    |> List.reverse
-                    |> Html.div []
-                , Html.text (Debug.toString appModel)
-                ]
+            view (\msg -> ( Just msg, builder.emptyComponentsMsg )) appModel
     , update =
-        \msg ( appModel, componentsModel ) ->
+        \( maybeAppMsg, msg ) ( appModel, componentsModel ) ->
             let
                 updateAllComponents =
                     NT.endMapper2 builder.updater
@@ -90,15 +90,14 @@ done builder =
                 newComponentsModel =
                     updateAllComponents msg componentsModel
 
+                parseAllComponents =
+                    NT.endFolder builder.parser
+
                 update =
-                    let
-                        parseAllComponents =
-                            NT.endFolder builder.parser
-                    in
                     parseAllComponents builder.app.update newComponentsModel
 
                 newAppModel =
-                    update appModel
+                    update maybeAppMsg appModel
             in
             ( newAppModel, newComponentsModel )
     }
