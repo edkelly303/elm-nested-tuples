@@ -8,9 +8,9 @@ start app =
     { emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
     , updater = NT.define
+    , cmder = NT.define
     , viewer = NT.define
     , init = NT.define
-    , parser = NT.define
     , app = app
     }
 
@@ -20,87 +20,116 @@ type Msg msg
     | ComponentMsg msg
 
 
-add component { emptyComponentsMsg, setters, updater, viewer, init, parser, app } =
+add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, app } =
     { emptyComponentsMsg = NT.cons NoComponentMsg emptyComponentsMsg
     , setters = NT.setter setters
     , updater =
-        NT.mapper2
-            (\composerMsg componentModel ->
+        NT.mapper3WithContext
+            (\emptyComponentsMsg_ setter composerMsg componentModel ->
                 case composerMsg of
                     ComponentMsg componentMsg ->
-                        component.update componentMsg componentModel
+                        component.update
+                            { toSelf = Cmd.map (\msg -> ( Nothing, setter (ComponentMsg msg) emptyComponentsMsg_ ))
+                            , toParent = Cmd.map (\msg -> ( Just msg, emptyComponentsMsg_ ))
+                            }
+                            componentMsg
+                            componentModel
+                            |> Tuple.first
 
                     NoComponentMsg ->
                         componentModel
             )
             updater
+    , cmder =
+        NT.folder3
+            (\setter composerMsg componentModel ( cmdList, emptyComponentsMsg_ ) ->
+                case composerMsg of
+                    ComponentMsg componentMsg ->
+                        let
+                            msgMapper =
+                                \msg -> ( Nothing, setter (ComponentMsg msg) emptyComponentsMsg_ )
+
+                            ( _, cmd ) =
+                                component.update
+                                    { toSelf = Cmd.map msgMapper
+                                    , toParent = Cmd.map (\msg -> ( Just msg, emptyComponentsMsg_ ))
+                                    }
+                                    componentMsg
+                                    componentModel
+                        in
+                        ( cmd :: cmdList, emptyComponentsMsg_ )
+
+                    NoComponentMsg ->
+                        ( cmdList, emptyComponentsMsg_ )
+            )
+            cmder
     , viewer =
         NT.folder2
-            (\insertComposerMsg componentModel ( viewCtor, emptyComponentsMsg_ ) ->
+            (\setter componentModel ( viewCtor, emptyComponentsMsg_ ) ->
                 let
-                    componentMsgToAppMsg componentMsg =
-                        insertComposerMsg (ComponentMsg componentMsg) emptyComponentsMsg_
-
                     msgMapper =
-                        \msg -> ( Nothing, componentMsgToAppMsg msg )
+                        \msg -> ( Nothing, setter (ComponentMsg msg) emptyComponentsMsg_ )
 
                     view =
                         component.view componentModel
                             |> Html.map msgMapper
                 in
-                ( viewCtor { view = view, send = msgMapper, value = component.parse componentModel }
+                ( viewCtor { view = view, send = msgMapper }
                 , emptyComponentsMsg_
                 )
             )
             viewer
     , init =
         NT.appender component.init init
-    , parser =
-        NT.folder
-            (\componentModel ctor_ ->
-                ctor_ (component.parse componentModel)
-            )
-            parser
     , app = app
     }
 
 
 done builder =
-    { init = ( builder.app.init, NT.endAppender builder.init )
+    let
+        setters =
+            NT.endSetters builder.setters
+    in
+    { init = \_ -> ( ( builder.app.init, NT.endAppender builder.init ), Cmd.none )
     , view =
         \( appModel, componentsModel ) ->
             let
-                composerMsgInserters =
-                    NT.endSetters builder.setters
-
                 collectComponentViews =
                     NT.endFolder2 builder.viewer
 
                 view =
                     collectComponentViews
                         ( builder.app.view, builder.emptyComponentsMsg )
-                        composerMsgInserters
+                        setters
                         componentsModel
                         |> Tuple.first
             in
             view (\msg -> ( Just msg, builder.emptyComponentsMsg )) appModel
     , update =
-        \( maybeAppMsg, msg ) ( appModel, componentsModel ) ->
+        \( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) ->
             let
                 updateAllComponents =
-                    NT.endMapper2 builder.updater
+                    NT.endMapper3WithContext builder.updater
 
                 newComponentsModel =
-                    updateAllComponents msg componentsModel
+                    updateAllComponents builder.emptyComponentsMsg setters componentsMsg componentsModel
 
-                parseAllComponents =
-                    NT.endFolder builder.parser
+                gatherAllCmds =
+                    NT.endFolder3 builder.cmder
 
-                update =
-                    parseAllComponents builder.app.update newComponentsModel
+                componentCmds =
+                    gatherAllCmds ( [], builder.emptyComponentsMsg ) setters componentsMsg componentsModel
+                        |> Tuple.first
 
-                newAppModel =
-                    update maybeAppMsg appModel
+                ( newAppModel, appCmd ) =
+                    case maybeAppMsg of
+                        Just appMsg ->
+                            builder.app.update appMsg appModel
+
+                        Nothing ->
+                            ( appModel, Cmd.none )
             in
-            ( newAppModel, newComponentsModel )
+            ( ( newAppModel, newComponentsModel ), Cmd.batch (appCmd :: componentCmds) )
+    , subscriptions =
+        \( appModel, componentsModel ) -> Sub.none
     }

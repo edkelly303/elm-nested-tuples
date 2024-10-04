@@ -5,10 +5,17 @@ import Browser
 import Html
 import Html.Attributes
 import Html.Events
+import Process
+import Task
 
 
+main :
+    Program
+        ()
+        ( { bool : Bool }, ( Int, ( String, () ) ) )
+        ( Maybe Msg, ( App.Msg CounterMsg, ( App.Msg FloatMsg, () ) ) )
 main =
-    Browser.sandbox app
+    Browser.element app
 
 
 type alias Model =
@@ -17,37 +24,27 @@ type alias Model =
 
 type Msg
     = CheckboxClicked Bool
+    | CounterButtonComponentReset
 
 
 app =
     App.start
         { init = { bool = False }
         , update =
-            \counterValue floatFieldValue maybeMsg model ->
-                if counterValue > 5 || floatFieldValue == Just 0.0 then
-                    { model | bool = False }
+            \msg model ->
+                case msg of
+                    CheckboxClicked bool ->
+                        ( { model | bool = bool }, Cmd.none )
 
-                else
-                    case maybeMsg of
-                        Just (CheckboxClicked bool) ->
-                            { model
-                                | bool =
-                                    if counterValue > 5 || floatFieldValue == Just 0.0 then
-                                        False
-
-                                    else
-                                        bool
-                            }
-
-                        Nothing ->
-                            model
+                    CounterButtonComponentReset ->
+                        ( Debug.log "Counter component has been reset!" model, Cmd.none )
         , view =
-            \counter_ floatField_ toMsg model ->
+            \counterButton_ floatInput_ toMsg model ->
                 Html.div []
                     [ Html.p []
                         [ Html.h4 [] [ Html.text "These two views come from encapsulated components, which manage their own state" ]
-                        , Html.div [] [ counter_.view ]
-                        , Html.div [] [ floatField_.view ]
+                        , Html.div [] [ counterButton_.view ]
+                        , Html.div [] [ floatInput_.view ]
                         ]
                     , Html.p []
                         [ Html.h4 [] [ Html.text "By contrast, the state of this checkbox lives in the user's model" ]
@@ -59,19 +56,14 @@ app =
                                 ]
                                 []
                             ]
-                        , Html.small [] [ Html.text "(We have set some rules in our update function: the checkbox will always be false if the counter is > 5 or the text box contains the float value \"0.0\")" ]
-                        ]
-                    , Html.p []
-                        [ Html.h4 [] [ Html.text "Here we take a peek at the values of the components directly" ]
-                        , Html.div [] [ Html.text (Debug.toString counter_.value) ]
-                        , Html.div [] [ Html.text (Debug.toString floatField_.value) ]
+                        , Html.small [] [ Html.text "(We have set some rules in our update function: the checkbox will always be false if the counterButton is > 5 or the text box contains the float value \"0.0\")" ]
                         ]
                     , Html.p
                         []
                         [ Html.h4 [] [ Html.text "Here we send a message from the user's view to one of the components" ]
                         , Html.button
-                            [ Html.Events.onClick (counter_.send Reset) ]
-                            [ Html.text "Reset counter" ]
+                            [ Html.Events.onClick (counterButton_.send Reset) ]
+                            [ Html.text "Reset counterButton" ]
                         ]
                     , Html.p []
                         [ Html.h4 [] [ Html.text "And here's a look at our app's model - gloriously unpolluted by component state" ]
@@ -79,8 +71,8 @@ app =
                         ]
                     ]
         }
-        |> App.add counter
-        |> App.add floatField
+        |> App.add (counterButton { notifyParent = CounterButtonComponentReset })
+        |> App.add floatInput
         |> App.done
 
 
@@ -89,23 +81,21 @@ type CounterMsg
     | Reset
 
 
-counter =
+counterButton { notifyParent } =
     { init = 0
     , update =
-        \msg model ->
+        \cmd msg model ->
             case msg of
                 Increment ->
-                    model + 1
+                    ( model + 1, cmd.toSelf (Task.perform (\_ -> Reset) (Process.sleep 10000)) )
 
                 Reset ->
-                    0
+                    ( 0, cmd.toParent (Task.perform (\_ -> notifyParent) (Process.sleep 0)) )
     , view =
         \model ->
             Html.button
                 [ Html.Events.onClick Increment ]
                 [ Html.text (String.fromInt model) ]
-    , parse =
-        identity
     }
 
 
@@ -113,16 +103,14 @@ type FloatMsg
     = FloatChanged String
 
 
-floatField =
+floatInput =
     { init = ""
     , update =
-        \msg model ->
+        \cmd msg model ->
             case msg of
                 FloatChanged str ->
-                    str
+                    ( str, Cmd.none )
     , view =
         \model ->
             Html.input [ Html.Events.onInput FloatChanged ] []
-    , parse =
-        String.toFloat
     }
