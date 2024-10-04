@@ -11,32 +11,28 @@ start app =
     , cmder = NT.define
     , viewer = NT.define
     , init = NT.define
+    , subscriber = NT.define
     , app = app
     }
 
 
-type Msg msg
-    = NoComponentMsg
-    | ComponentMsg msg
-
-
-add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, app } =
-    { emptyComponentsMsg = NT.cons NoComponentMsg emptyComponentsMsg
+add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, subscriber, app } =
+    { emptyComponentsMsg = NT.cons Nothing emptyComponentsMsg
     , setters = NT.setter setters
     , updater =
         NT.mapper3WithContext
             (\emptyComponentsMsg_ setter composerMsg componentModel ->
                 case composerMsg of
-                    ComponentMsg componentMsg ->
+                    Just componentMsg ->
                         component.update
-                            { toSelf = Cmd.map (\msg -> ( Nothing, setter (ComponentMsg msg) emptyComponentsMsg_ ))
+                            { toSelf = Cmd.map (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             , toParent = Cmd.map (\msg -> ( Just msg, emptyComponentsMsg_ ))
                             }
                             componentMsg
                             componentModel
                             |> Tuple.first
 
-                    NoComponentMsg ->
+                    Nothing ->
                         componentModel
             )
             updater
@@ -44,10 +40,10 @@ add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, app }
         NT.folder3
             (\setter composerMsg componentModel ( cmdList, emptyComponentsMsg_ ) ->
                 case composerMsg of
-                    ComponentMsg componentMsg ->
+                    Just componentMsg ->
                         let
                             msgMapper =
-                                \msg -> ( Nothing, setter (ComponentMsg msg) emptyComponentsMsg_ )
+                                \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
 
                             ( _, cmd ) =
                                 component.update
@@ -59,7 +55,7 @@ add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, app }
                         in
                         ( cmd :: cmdList, emptyComponentsMsg_ )
 
-                    NoComponentMsg ->
+                    Nothing ->
                         ( cmdList, emptyComponentsMsg_ )
             )
             cmder
@@ -68,7 +64,7 @@ add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, app }
             (\setter componentModel ( viewCtor, emptyComponentsMsg_ ) ->
                 let
                     msgMapper =
-                        \msg -> ( Nothing, setter (ComponentMsg msg) emptyComponentsMsg_ )
+                        \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
 
                     view =
                         component.view componentModel
@@ -81,6 +77,16 @@ add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, app }
             viewer
     , init =
         NT.appender component.init init
+    , subscriber =
+        NT.folder2
+            (\setter model ( subList, emptyComponentsMsg_ ) ->
+                let
+                    msgMapper =
+                        \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
+                in
+                ( (component.subscriptions model |> Sub.map msgMapper) :: subList, emptyComponentsMsg_ )
+            )
+            subscriber
     , app = app
     }
 
@@ -131,5 +137,12 @@ done builder =
             in
             ( ( newAppModel, newComponentsModel ), Cmd.batch (appCmd :: componentCmds) )
     , subscriptions =
-        \( appModel, componentsModel ) -> Sub.none
+        \( appModel, componentsModel ) ->
+            let
+                componentSubscriptions =
+                    NT.endFolder2 builder.subscriber ( [], builder.emptyComponentsMsg ) setters componentsModel
+                        |> Tuple.first
+            in
+            Sub.batch
+                (builder.app.subscriptions appModel :: componentSubscriptions)
     }

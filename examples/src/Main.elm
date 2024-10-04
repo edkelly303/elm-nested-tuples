@@ -7,95 +7,102 @@ import Html.Attributes
 import Html.Events
 import Process
 import Task
+import Time
 
 
 main :
     Program
         ()
-        ( { bool : Bool }, ( Int, ( String, () ) ) )
-        ( Maybe Msg, ( App.Msg CounterMsg, ( App.Msg FloatMsg, () ) ) )
+        ( { timerExpired : Bool }, ( Maybe Int, () ) )
+        ( Maybe Msg, ( Maybe TimerMsg, () ) )
 main =
     Browser.element app
 
 
 type alias Model =
-    { bool : Bool }
+    { timerExpired : Bool }
 
 
 type Msg
-    = CheckboxClicked Bool
-    | CounterButtonComponentReset
+    = TimerExpired
 
 
 app =
     App.start
-        { init = { bool = False }
+        { init = { timerExpired = False }
         , update =
             \msg model ->
                 case msg of
-                    CheckboxClicked bool ->
-                        ( { model | bool = bool }, Cmd.none )
-
-                    CounterButtonComponentReset ->
-                        ( Debug.log "Counter component has been reset!" model, Cmd.none )
+                    TimerExpired ->
+                        ( { timerExpired = True }, Cmd.none )
         , view =
-            \counterButton_ floatInput_ toMsg model ->
+            \counterButton_ sendToSelf model ->
                 Html.div []
                     [ Html.p []
-                        [ Html.h4 [] [ Html.text "These two views come from encapsulated components, which manage their own state" ]
+                        [ Html.h4 [] [ Html.text "The timer element below comes from an encapsulated component, which manages its own state and can send messages to the app's update function" ]
                         , Html.div [] [ counterButton_.view ]
-                        , Html.div [] [ floatInput_.view ]
-                        ]
-                    , Html.p []
-                        [ Html.h4 [] [ Html.text "By contrast, the state of this checkbox lives in the user's model" ]
-                        , Html.div []
-                            [ Html.input
-                                [ Html.Attributes.type_ "checkbox"
-                                , Html.Attributes.checked model.bool
-                                , Html.Events.onCheck (toMsg << CheckboxClicked)
-                                ]
-                                []
-                            ]
-                        , Html.small [] [ Html.text "(We have set some rules in our update function: the checkbox will always be false if the counterButton is > 5 or the text box contains the float value \"0.0\")" ]
                         ]
                     , Html.p
                         []
-                        [ Html.h4 [] [ Html.text "Here we send a message from the user's view to one of the components" ]
+                        [ Html.h4 [] [ Html.text "Here we send a message from the app's view to the component" ]
                         , Html.button
                             [ Html.Events.onClick (counterButton_.send Reset) ]
-                            [ Html.text "Reset counterButton" ]
+                            [ Html.text "Reset timer" ]
                         ]
                     , Html.p []
                         [ Html.h4 [] [ Html.text "And here's a look at our app's model - gloriously unpolluted by component state" ]
                         , Html.text (Debug.toString model)
                         ]
                     ]
+        , subscriptions = \model -> Sub.none
         }
-        |> App.add (counterButton { notifyParent = CounterButtonComponentReset })
-        |> App.add floatInput
+        |> App.add (timer { timerExpired = TimerExpired })
         |> App.done
 
 
-type CounterMsg
-    = Increment
+type TimerMsg
+    = Start
+    | Tick
     | Reset
 
 
-counterButton { notifyParent } =
-    { init = 0
+timer { timerExpired } =
+    { init = Nothing
     , update =
         \cmd msg model ->
             case msg of
-                Increment ->
-                    ( model + 1, cmd.toSelf (Task.perform (\_ -> Reset) (Process.sleep 10000)) )
+                Start ->
+                    ( Just 10, Cmd.none )
+
+                Tick ->
+                    if model == Just 0 then
+                        ( Nothing, cmd.toParent (Task.perform (\_ -> timerExpired) (Process.sleep 0)) )
+
+                    else
+                        ( Maybe.map (\n -> n - 1) model, Cmd.none )
 
                 Reset ->
-                    ( 0, cmd.toParent (Task.perform (\_ -> notifyParent) (Process.sleep 0)) )
+                    ( Nothing, cmd.toParent (Task.perform (\_ -> timerExpired) (Process.sleep 0)) )
     , view =
         \model ->
-            Html.button
-                [ Html.Events.onClick Increment ]
-                [ Html.text (String.fromInt model) ]
+            Html.article []
+                [ Html.strong [] [ Html.text "Countdown timer" ]
+                , Html.h2 [] [ Html.text (model |> Maybe.withDefault 10 |> String.fromInt) ]
+                , Html.button
+                    [ Html.Events.onClick Start ]
+                    [ Html.text "Start" ]
+                , Html.button
+                    [ Html.Events.onClick Reset ]
+                    [ Html.text "Reset" ]
+                ]
+    , subscriptions =
+        \model ->
+            case model of
+                Nothing ->
+                    Sub.none
+
+                Just _ ->
+                    Time.every 1000 (\_ -> Tick)
     }
 
 
@@ -113,4 +120,6 @@ floatInput =
     , view =
         \model ->
             Html.input [ Html.Events.onInput FloatChanged ] []
+    , subscriptions =
+        \model -> Sub.none
     }
