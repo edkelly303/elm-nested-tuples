@@ -40,7 +40,7 @@ app =
                     TimerReset ->
                         ( { model | timerExpired = False }, Cmd.none )
         , view =
-            \counterButton_ sendToSelf model ->
+            \timer_ sendToSelf model ->
                 Html.div []
                     [ Html.p []
                         [ Html.text
@@ -53,7 +53,7 @@ app =
                             view function.
                             """
                         ]
-                    , counterButton_.view
+                    , timer_.view
                     , Html.p []
                         [ Html.text
                             """
@@ -85,7 +85,7 @@ app =
                             """
                         ]
                     , Html.button
-                        [ Html.Events.onClick (counterButton_.send Reset) ]
+                        [ Html.Events.onClick (timer_.send Reset) ]
                         [ Html.text "Reset timer" ]
                     ]
         , subscriptions = \model -> Sub.none
