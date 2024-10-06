@@ -40,21 +40,28 @@ add component builder =
             builder.updater
     , cmder =
         NT.folder3
-            (\setter maybeThisComponentMsg thisComponentModel ( cmdList, emptyComponentsMsg_ ) ->
-                case maybeThisComponentMsg of
-                    Just thisComponentMsg ->
-                        let
-                            ( _, cmd ) =
-                                component.update
-                                    (\msg -> ( Just msg, emptyComponentsMsg_ ))
-                                    (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
-                                    thisComponentMsg
-                                    thisComponentModel
-                        in
-                        ( cmd :: cmdList, emptyComponentsMsg_ )
+            (\setter maybeThisComponentMsg thisComponentModel ( parentUpdate, cmdList, emptyComponentsMsg_ ) ->
+                let
+                    newParentUpdate =
+                        parentUpdate (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
 
-                    Nothing ->
-                        ( cmdList, emptyComponentsMsg_ )
+                    newCmdList =
+                        case maybeThisComponentMsg of
+                            Just thisComponentMsg ->
+                                let
+                                    ( _, cmd ) =
+                                        component.update
+                                            (\msg -> ( Just msg, emptyComponentsMsg_ ))
+                                            (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                                            thisComponentMsg
+                                            thisComponentModel
+                                in
+                                cmd :: cmdList
+
+                            Nothing ->
+                                cmdList
+                in
+                ( newParentUpdate, newCmdList, emptyComponentsMsg_ )
             )
             builder.cmder
     , viewer =
@@ -115,14 +122,17 @@ done builder =
                 gatherComponentCmds =
                     NT.endFolder3 builder.cmder
 
-                componentCmds =
-                    gatherComponentCmds ( [], builder.emptyComponentsMsg ) setters componentsMsg componentsModel
-                        |> Tuple.first
+                ( appUpdate, componentCmds, _ ) =
+                    gatherComponentCmds
+                        ( builder.app.update, [], builder.emptyComponentsMsg )
+                        setters
+                        componentsMsg
+                        componentsModel
 
                 ( newAppModel, appCmd ) =
                     case maybeAppMsg of
                         Just appMsg ->
-                            builder.app.update appMsg appModel
+                            appUpdate toApp appMsg appModel
 
                         Nothing ->
                             ( appModel, Cmd.none )

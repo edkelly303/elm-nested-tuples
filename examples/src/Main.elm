@@ -32,7 +32,7 @@ app =
     App.start
         { init = { timerExpired = False }
         , update =
-            \msg model ->
+            \toTimer toSelf msg model ->
                 case msg of
                     TimerExpired ->
                         ( { model | timerExpired = True }, Cmd.none )
