@@ -59,7 +59,7 @@ add component builder =
             builder.cmder
     , viewer =
         NT.folder2
-            (\setter thisComponentModel ( viewCtor, emptyComponentsMsg_ ) ->
+            (\setter thisComponentModel ( parentView, emptyComponentsMsg_ ) ->
                 let
                     view =
                         component.view
@@ -67,7 +67,7 @@ add component builder =
                             (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             thisComponentModel
                 in
-                ( viewCtor
+                ( parentView
                     { view = view
                     , send = \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
                     }
@@ -77,7 +77,7 @@ add component builder =
             builder.viewer
     , subscriber =
         NT.folder2
-            (\setter thisComponentModel ( subList, emptyComponentsMsg_ ) ->
+            (\setter thisComponentModel ( parentSubscriptions, subList, emptyComponentsMsg_ ) ->
                 let
                     subscriptions =
                         component.subscriptions
@@ -85,7 +85,8 @@ add component builder =
                             (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             thisComponentModel
                 in
-                ( subscriptions :: subList
+                ( parentSubscriptions (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                , subscriptions :: subList
                 , emptyComponentsMsg_
                 )
             )
@@ -97,6 +98,9 @@ done builder =
     let
         setters =
             NT.endSetters builder.setters
+
+        toApp msg =
+            ( Just msg, builder.emptyComponentsMsg )
     in
     { init = \_ -> ( ( builder.app.init, NT.endAppender builder.init ), Cmd.none )
     , update =
@@ -137,17 +141,19 @@ done builder =
                         componentsModel
                         |> Tuple.first
             in
-            view (\msg -> ( Just msg, builder.emptyComponentsMsg )) appModel
+            view toApp appModel
     , subscriptions =
         \( appModel, componentsModel ) ->
             let
                 gatherComponentSubscriptions =
                     NT.endFolder2 builder.subscriber
 
-                componentSubscriptions =
-                    gatherComponentSubscriptions ( [], builder.emptyComponentsMsg ) setters componentsModel
-                        |> Tuple.first
+                ( appSubscriptions, componentSubscriptions, _ ) =
+                    gatherComponentSubscriptions
+                        ( builder.app.subscriptions, [], builder.emptyComponentsMsg )
+                        setters
+                        componentsModel
             in
             Sub.batch
-                (builder.app.subscriptions appModel :: componentSubscriptions)
+                (appSubscriptions toApp appModel :: componentSubscriptions)
     }
