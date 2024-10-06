@@ -30,7 +30,9 @@ type Msg
 
 app =
     App.start
-        { init = { timerExpired = False }
+        { init =
+            \toTimer toSelf flags ->
+                ( { timerExpired = False }, Cmd.none )
         , update =
             \toTimer toSelf msg model ->
                 case msg of
@@ -53,7 +55,7 @@ app =
                             view function.
                             """
                         ]
-                    , timer_.view
+                    , timer_.output
                     , Html.p []
                         [ Html.text
                             """
@@ -100,11 +102,15 @@ type TimerMsg
     | Tick
     | Reset
 
-type alias TimerModel = 
+
+type alias TimerModel =
     Maybe Int
 
+
 timer { timerExpired, timerReset } =
-    { init = Nothing
+    { init =
+        \toParent toSelf flags ->
+            ( Nothing, Cmd.none )
     , update =
         \toParent toSelf msg model ->
             case msg of

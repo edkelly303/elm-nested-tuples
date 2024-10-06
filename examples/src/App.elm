@@ -1,6 +1,5 @@
 module App exposing (..)
 
-import Html
 import NestedTuple as NT
 
 
@@ -15,26 +14,28 @@ start app =
     , subscriber = NT.define
     }
 
+
 add component builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , init = 
-        NT.folder 
-            (\setter acc -> 
-                let 
-                    ( thisComponentModel, thisCmd ) = 
-                        component.init 
+    , init =
+        NT.folder
+            (\setter acc ->
+                let
+                    ( thisComponentModel, thisCmd ) =
+                        component.init
                             (\msg -> ( Just msg, acc.emptyComponentsMsg ))
-                            (\msg -> ( Nothing, setter (Just msg) accemptyComponentsMsg ))
+                            (\msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg ))
                             acc.flags
                 in
-                { acc 
-                | componentsModel = NT.appender thisComponentModel acc.componentsModel
-                , appInit = acc.appInit (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                { componentsModel = NT.appender thisComponentModel acc.componentsModel
+                , appInit = acc.appInit (\msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg ))
                 , cmdList = thisCmd :: acc.cmdList
+                , flags = acc.flags
+                , emptyComponentsMsg = acc.emptyComponentsMsg
                 }
-            ) 
+            )
             builder.init
     , updater =
         NT.mapper3WithContext
@@ -89,7 +90,7 @@ add component builder =
                             thisComponentModel
                 in
                 ( parentView
-                    { view = view
+                    { output = view
                     , send = \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
                     }
                 , emptyComponentsMsg_
@@ -103,7 +104,7 @@ add component builder =
                     subscriptions =
                         component.subscriptions
                             (\msg -> ( Just msg, emptyComponentsMsg_ ))
-                  setters   (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                            (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             thisComponentModel
                 in
                 ( parentSubscriptions (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
@@ -123,29 +124,28 @@ done builder =
         toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = 
-        \flags -> 
-            let 
-                initialise = 
+    { init =
+        \flags ->
+            let
+                initialise =
                     NT.endFolder builder.init
 
-                { appInit, cmdList, componentsModel } = 
-                    initialize 
+                { appInit, cmdList, componentsModel } =
+                    initialise
                         { emptyComponentsMsg = builder.emptyComponentsMsg
                         , flags = flags
                         , appInit = builder.app.init
                         , cmdList = []
                         , componentsModel = NT.define
-                        } 
-                        builder.setters
-                        
-                ( appModel, appCmd ) = 
+                        }
+                        setters
+
+                ( appModel, appCmd ) =
                     appInit toApp flags
             in
-            ( ( appModel, componentsModel () )
+            ( ( appModel, NT.endAppender componentsModel )
             , Cmd.batch (appCmd :: cmdList)
             )
-    
     , update =
         \( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) ->
             let
