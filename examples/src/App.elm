@@ -15,13 +15,27 @@ start app =
     , subscriber = NT.define
     }
 
-
 add component builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
-    , init =
-        NT.appender component.init builder.init
+    , init = 
+        NT.folder 
+            (\setter acc -> 
+                let 
+                    ( thisComponentModel, thisCmd ) = 
+                        component.init 
+                            (\msg -> ( Just msg, acc.emptyComponentsMsg ))
+                            (\msg -> ( Nothing, setter (Just msg) accemptyComponentsMsg ))
+                            acc.flags
+                in
+                { acc 
+                | componentsModel = NT.appender thisComponentModel acc.componentsModel
+                , appInit = acc.appInit (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                , cmdList = thisCmd :: acc.cmdList
+                }
+            ) 
+            builder.init
     , updater =
         NT.mapper3WithContext
             (\emptyComponentsMsg_ setter maybeThisComponentMsg thisComponentModel ->
@@ -89,7 +103,7 @@ add component builder =
                     subscriptions =
                         component.subscriptions
                             (\msg -> ( Just msg, emptyComponentsMsg_ ))
-                            (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                  setters   (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             thisComponentModel
                 in
                 ( parentSubscriptions (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
@@ -109,7 +123,29 @@ done builder =
         toApp msg =
             ( Just msg, builder.emptyComponentsMsg )
     in
-    { init = \_ -> ( ( builder.app.init, NT.endAppender builder.init ), Cmd.none )
+    { init = 
+        \flags -> 
+            let 
+                initialise = 
+                    NT.endFolder builder.init
+
+                { appInit, cmdList, componentsModel } = 
+                    initialize 
+                        { emptyComponentsMsg = builder.emptyComponentsMsg
+                        , flags = flags
+                        , appInit = builder.app.init
+                        , cmdList = []
+                        , componentsModel = NT.define
+                        } 
+                        builder.setters
+                        
+                ( appModel, appCmd ) = 
+                    appInit toApp flags
+            in
+            ( ( appModel, componentsModel () )
+            , Cmd.batch (appCmd :: cmdList)
+            )
+    
     , update =
         \( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) ->
             let
