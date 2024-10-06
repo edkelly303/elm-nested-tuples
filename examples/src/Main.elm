@@ -13,7 +13,7 @@ import Time
 main :
     Program
         ()
-        ( { timerExpired : Bool }, ( Maybe Int, () ) )
+        ( Model, ( TimerModel, () ) )
         ( Maybe Msg, ( Maybe TimerMsg, () ) )
 main =
     Browser.element app
@@ -100,6 +100,8 @@ type TimerMsg
     | Tick
     | Reset
 
+type alias TimerModel = 
+    Maybe Int
 
 timer { timerExpired, timerReset } =
     { init = Nothing
