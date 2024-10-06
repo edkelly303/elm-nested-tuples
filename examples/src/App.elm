@@ -5,29 +5,31 @@ import NestedTuple as NT
 
 
 start app =
-    { emptyComponentsMsg = NT.empty
+    { app = app
+    , emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
+    , init = NT.define
     , updater = NT.define
     , cmder = NT.define
     , viewer = NT.define
-    , init = NT.define
     , subscriber = NT.define
-    , app = app
     }
 
 
 add component builder =
-    { emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
+    { app = builder.app
+    , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters
+    , init =
+        NT.appender component.init builder.init
     , updater =
         NT.mapper3WithContext
             (\emptyComponentsMsg_ setter maybeThisComponentMsg thisComponentModel ->
                 case maybeThisComponentMsg of
                     Just thisComponentMsg ->
                         component.update
-                            { toSelf = Cmd.map (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
-                            , toParent = Cmd.map (\msg -> ( Just msg, emptyComponentsMsg_ ))
-                            }
+                            (\msg -> ( Just msg, emptyComponentsMsg_ ))
+                            (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             thisComponentMsg
                             thisComponentModel
                             |> Tuple.first
@@ -42,14 +44,10 @@ add component builder =
                 case maybeThisComponentMsg of
                     Just thisComponentMsg ->
                         let
-                            msgMapper =
-                                \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
-
                             ( _, cmd ) =
                                 component.update
-                                    { toSelf = Cmd.map msgMapper
-                                    , toParent = Cmd.map (\msg -> ( Just msg, emptyComponentsMsg_ ))
-                                    }
+                                    (\msg -> ( Just msg, emptyComponentsMsg_ ))
+                                    (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                                     thisComponentMsg
                                     thisComponentModel
                         in
@@ -63,31 +61,35 @@ add component builder =
         NT.folder2
             (\setter thisComponentModel ( viewCtor, emptyComponentsMsg_ ) ->
                 let
-                    msgMapper =
-                        \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
-
                     view =
-                        component.view thisComponentModel
-                            |> Html.map msgMapper
+                        component.view
+                            (\msg -> ( Just msg, emptyComponentsMsg_ ))
+                            (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                            thisComponentModel
                 in
-                ( viewCtor { view = view, send = msgMapper }
+                ( viewCtor
+                    { view = view
+                    , send = \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
+                    }
                 , emptyComponentsMsg_
                 )
             )
             builder.viewer
-    , init =
-        NT.appender component.init builder.init
     , subscriber =
         NT.folder2
             (\setter thisComponentModel ( subList, emptyComponentsMsg_ ) ->
                 let
-                    msgMapper =
-                        \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
+                    subscriptions =
+                        component.subscriptions
+                            (\msg -> ( Just msg, emptyComponentsMsg_ ))
+                            (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                            thisComponentModel
                 in
-                ( (component.subscriptions thisComponentModel |> Sub.map msgMapper) :: subList, emptyComponentsMsg_ )
+                ( subscriptions :: subList
+                , emptyComponentsMsg_
+                )
             )
             builder.subscriber
-    , app = builder.app
     }
 
 
@@ -97,20 +99,6 @@ done builder =
             NT.endSetters builder.setters
     in
     { init = \_ -> ( ( builder.app.init, NT.endAppender builder.init ), Cmd.none )
-    , view =
-        \( appModel, componentsModel ) ->
-            let
-                gatherComponentViews =
-                    NT.endFolder2 builder.viewer
-
-                view =
-                    gatherComponentViews
-                        ( builder.app.view, builder.emptyComponentsMsg )
-                        setters
-                        componentsModel
-                        |> Tuple.first
-            in
-            view (\msg -> ( Just msg, builder.emptyComponentsMsg )) appModel
     , update =
         \( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) ->
             let
@@ -136,6 +124,20 @@ done builder =
                             ( appModel, Cmd.none )
             in
             ( ( newAppModel, newComponentsModel ), Cmd.batch (appCmd :: componentCmds) )
+    , view =
+        \( appModel, componentsModel ) ->
+            let
+                gatherComponentViews =
+                    NT.endFolder2 builder.viewer
+
+                view =
+                    gatherComponentViews
+                        ( builder.app.view, builder.emptyComponentsMsg )
+                        setters
+                        componentsModel
+                        |> Tuple.first
+            in
+            view (\msg -> ( Just msg, builder.emptyComponentsMsg )) appModel
     , subscriptions =
         \( appModel, componentsModel ) ->
             let

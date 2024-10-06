@@ -76,7 +76,6 @@ app =
                             the app's update function when it reaches zero
                             """
                         ]
-
                     , Html.p []
                         [ Html.text
                             """
@@ -103,22 +102,22 @@ type TimerMsg
 timer { timerExpired, timerReset } =
     { init = Nothing
     , update =
-        \cmd msg model ->
+        \toParent toSelf msg model ->
             case msg of
                 Start ->
                     ( Just 10, Cmd.none )
 
                 Tick ->
                     if model == Just 0 then
-                        ( Just 0, cmd.toParent (Task.perform (\_ -> timerExpired) (Process.sleep 0)) )
+                        ( Just 0, Task.perform (\_ -> toParent timerExpired) (Process.sleep 0) )
 
                     else
                         ( Maybe.map (\n -> n - 1) model, Cmd.none )
 
                 Reset ->
-                    ( Nothing, cmd.toParent (Task.perform (\_ -> timerReset) (Process.sleep 0)) )
+                    ( Nothing, Task.perform (\_ -> toParent timerReset) (Process.sleep 0) )
     , view =
-        \model ->
+        \toParent toSelf model ->
             Html.article
                 [ Html.Attributes.style "border" "solid 1px pink"
                 , Html.Attributes.style "border-radius" "10px"
@@ -131,18 +130,18 @@ timer { timerExpired, timerReset } =
                 [ Html.p [] [ Html.text "Countdown timer" ]
                 , Html.h1 [] [ Html.text (model |> Maybe.withDefault 10 |> String.fromInt) ]
                 , Html.button
-                    [ Html.Events.onClick Start ]
+                    [ Html.Events.onClick (toSelf Start) ]
                     [ Html.text "Start" ]
                 , Html.button
-                    [ Html.Events.onClick Reset ]
+                    [ Html.Events.onClick (toSelf Reset) ]
                     [ Html.text "Reset" ]
                 ]
     , subscriptions =
-        \model ->
+        \toParent toSelf model ->
             case model of
                 Nothing ->
                     Sub.none
 
                 Just _ ->
-                    Time.every 1000 (\_ -> Tick)
+                    Time.every 1000 (\_ -> toSelf Tick)
     }
