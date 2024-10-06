@@ -16,31 +16,31 @@ start app =
     }
 
 
-add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, subscriber, app } =
-    { emptyComponentsMsg = NT.cons Nothing emptyComponentsMsg
-    , setters = NT.setter setters
+add component builder =
+    { emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
+    , setters = NT.setter builder.setters
     , updater =
         NT.mapper3WithContext
-            (\emptyComponentsMsg_ setter composerMsg componentModel ->
-                case composerMsg of
-                    Just componentMsg ->
+            (\emptyComponentsMsg_ setter maybeThisComponentMsg thisComponentModel ->
+                case maybeThisComponentMsg of
+                    Just thisComponentMsg ->
                         component.update
                             { toSelf = Cmd.map (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             , toParent = Cmd.map (\msg -> ( Just msg, emptyComponentsMsg_ ))
                             }
-                            componentMsg
-                            componentModel
+                            thisComponentMsg
+                            thisComponentModel
                             |> Tuple.first
 
                     Nothing ->
-                        componentModel
+                        thisComponentModel
             )
-            updater
+            builder.updater
     , cmder =
         NT.folder3
-            (\setter composerMsg componentModel ( cmdList, emptyComponentsMsg_ ) ->
-                case composerMsg of
-                    Just componentMsg ->
+            (\setter maybeThisComponentMsg thisComponentModel ( cmdList, emptyComponentsMsg_ ) ->
+                case maybeThisComponentMsg of
+                    Just thisComponentMsg ->
                         let
                             msgMapper =
                                 \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
@@ -50,44 +50,44 @@ add component { emptyComponentsMsg, setters, updater, cmder, viewer, init, subsc
                                     { toSelf = Cmd.map msgMapper
                                     , toParent = Cmd.map (\msg -> ( Just msg, emptyComponentsMsg_ ))
                                     }
-                                    componentMsg
-                                    componentModel
+                                    thisComponentMsg
+                                    thisComponentModel
                         in
                         ( cmd :: cmdList, emptyComponentsMsg_ )
 
                     Nothing ->
                         ( cmdList, emptyComponentsMsg_ )
             )
-            cmder
+            builder.cmder
     , viewer =
         NT.folder2
-            (\setter componentModel ( viewCtor, emptyComponentsMsg_ ) ->
+            (\setter thisComponentModel ( viewCtor, emptyComponentsMsg_ ) ->
                 let
                     msgMapper =
                         \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
 
                     view =
-                        component.view componentModel
+                        component.view thisComponentModel
                             |> Html.map msgMapper
                 in
                 ( viewCtor { view = view, send = msgMapper }
                 , emptyComponentsMsg_
                 )
             )
-            viewer
+            builder.viewer
     , init =
-        NT.appender component.init init
+        NT.appender component.init builder.init
     , subscriber =
         NT.folder2
-            (\setter model ( subList, emptyComponentsMsg_ ) ->
+            (\setter thisComponentModel ( subList, emptyComponentsMsg_ ) ->
                 let
                     msgMapper =
                         \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
                 in
-                ( (component.subscriptions model |> Sub.map msgMapper) :: subList, emptyComponentsMsg_ )
+                ( (component.subscriptions thisComponentModel |> Sub.map msgMapper) :: subList, emptyComponentsMsg_ )
             )
-            subscriber
-    , app = app
+            builder.subscriber
+    , app = builder.app
     }
 
 
@@ -100,11 +100,11 @@ done builder =
     , view =
         \( appModel, componentsModel ) ->
             let
-                collectComponentViews =
+                gatherComponentViews =
                     NT.endFolder2 builder.viewer
 
                 view =
-                    collectComponentViews
+                    gatherComponentViews
                         ( builder.app.view, builder.emptyComponentsMsg )
                         setters
                         componentsModel
@@ -114,17 +114,17 @@ done builder =
     , update =
         \( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) ->
             let
-                updateAllComponents =
+                updateComponentsModel =
                     NT.endMapper3WithContext builder.updater
 
                 newComponentsModel =
-                    updateAllComponents builder.emptyComponentsMsg setters componentsMsg componentsModel
+                    updateComponentsModel builder.emptyComponentsMsg setters componentsMsg componentsModel
 
-                gatherAllCmds =
+                gatherComponentCmds =
                     NT.endFolder3 builder.cmder
 
                 componentCmds =
-                    gatherAllCmds ( [], builder.emptyComponentsMsg ) setters componentsMsg componentsModel
+                    gatherComponentCmds ( [], builder.emptyComponentsMsg ) setters componentsMsg componentsModel
                         |> Tuple.first
 
                 ( newAppModel, appCmd ) =
