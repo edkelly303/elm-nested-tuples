@@ -139,8 +139,11 @@ done builder =
     , subscriptions =
         \( appModel, componentsModel ) ->
             let
+                gatherComponentSubscriptions =
+                    NT.endFolder2 builder.subscriber
+
                 componentSubscriptions =
-                    NT.endFolder2 builder.subscriber ( [], builder.emptyComponentsMsg ) setters componentsModel
+                    gatherComponentSubscriptions ( [], builder.emptyComponentsMsg ) setters componentsModel
                         |> Tuple.first
             in
             Sub.batch
