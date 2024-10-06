@@ -31,10 +31,10 @@ type Msg
 app =
     App.start
         { init =
-            \toTimer toSelf flags ->
+            \sendToTimer sendToSelf flags ->
                 ( { timerExpired = False }, Cmd.none )
         , update =
-            \toTimer toSelf msg model ->
+            \sendToTimer sendToSelf msg model ->
                 case msg of
                     TimerExpired ->
                         ( { model | timerExpired = True }, Cmd.none )
@@ -42,7 +42,7 @@ app =
                     TimerReset ->
                         ( { model | timerExpired = False }, Cmd.none )
         , view =
-            \timer_ toSelf model ->
+            \timer sendToSelf model ->
                 Html.div []
                     [ Html.p []
                         [ Html.text
@@ -55,7 +55,7 @@ app =
                             view function.
                             """
                         ]
-                    , timer_.output
+                    , timer.output
                     , Html.p []
                         [ Html.text
                             """
@@ -86,14 +86,14 @@ app =
                             """
                         ]
                     , Html.button
-                        [ Html.Events.onClick (timer_.send Reset) ]
+                        [ Html.Events.onClick (timer.sendTo Reset) ]
                         [ Html.text "Reset timer" ]
                     ]
         , subscriptions =
-            \toTimer toSelf model ->
+            \sendToTimer sendToSelf model ->
                 Sub.none
         }
-        |> App.add (timer { timerExpired = TimerExpired, timerReset = TimerReset })
+        |> App.add (timerComponent { timerExpired = TimerExpired, timerReset = TimerReset })
         |> App.done
 
 
@@ -107,27 +107,27 @@ type alias TimerModel =
     Maybe Int
 
 
-timer { timerExpired, timerReset } =
+timerComponent { timerExpired, timerReset } =
     { init =
-        \toParent toSelf flags ->
+        \sendToApp sendToSelf flags ->
             ( Nothing, Cmd.none )
     , update =
-        \toParent toSelf msg model ->
+        \sendToApp sendToSelf msg model ->
             case msg of
                 Start ->
                     ( Just 10, Cmd.none )
 
                 Tick ->
                     if model == Just 0 then
-                        ( Just 0, Task.perform (\_ -> toParent timerExpired) (Process.sleep 0) )
+                        ( Just 0, Task.perform (\_ -> sendToApp timerExpired) (Process.sleep 0) )
 
                     else
                         ( Maybe.map (\n -> n - 1) model, Cmd.none )
 
                 Reset ->
-                    ( Nothing, Task.perform (\_ -> toParent timerReset) (Process.sleep 0) )
+                    ( Nothing, Task.perform (\_ -> sendToApp timerReset) (Process.sleep 0) )
     , view =
-        \toParent toSelf model ->
+        \sendToApp sendToSelf model ->
             Html.article
                 [ Html.Attributes.style "border" "solid 1px pink"
                 , Html.Attributes.style "border-radius" "10px"
@@ -140,18 +140,18 @@ timer { timerExpired, timerReset } =
                 [ Html.p [] [ Html.text "Countdown timer" ]
                 , Html.h1 [] [ Html.text (model |> Maybe.withDefault 10 |> String.fromInt) ]
                 , Html.button
-                    [ Html.Events.onClick (toSelf Start) ]
+                    [ Html.Events.onClick (sendToSelf Start) ]
                     [ Html.text "Start" ]
                 , Html.button
-                    [ Html.Events.onClick (toSelf Reset) ]
+                    [ Html.Events.onClick (sendToSelf Reset) ]
                     [ Html.text "Reset" ]
                 ]
     , subscriptions =
-        \toParent toSelf model ->
+        \sendToApp sendToSelf model ->
             case model of
                 Nothing ->
                     Sub.none
 
                 Just _ ->
-                    Time.every 1000 (\_ -> toSelf Tick)
+                    Time.every 1000 (\_ -> sendToSelf Tick)
     }

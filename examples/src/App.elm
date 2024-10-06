@@ -91,7 +91,7 @@ add component builder =
                 in
                 ( parentView
                     { output = view
-                    , send = \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
+                    , sendTo = \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
                     }
                 , emptyComponentsMsg_
                 )
