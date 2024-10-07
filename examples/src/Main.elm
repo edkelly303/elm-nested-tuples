@@ -13,40 +13,45 @@ import Time
 main :
     Program
         ()
-        ( Model, ( TimerModel, () ) )
-        ( Maybe Msg, ( Maybe TimerMsg, () ) )
+        ( AppModel, ( TimerModel, () ) )
+        ( Maybe AppMsg, ( Maybe TimerMsg, () ) )
 main =
-    Browser.element app
+    Browser.element program
 
 
-type alias Model =
+program =
+    Composer.defineApp app
+        |> Composer.addComponent (timerComponent { timerExpired = TimerExpired, timerReset = TimerReset })
+        |> Composer.done
+
+
+type alias AppModel =
     { timerExpired : Bool }
 
 
-type Msg
+type AppMsg
     = TimerExpired
     | TimerReset
 
 
 app =
-    Composer.defineApp
-        { init =
-            \sendToTimer sendToSelf flags ->
-                ( { timerExpired = False }, Cmd.none )
-        , update =
-            \sendToTimer sendToSelf msg model ->
-                case msg of
-                    TimerExpired ->
-                        ( { model | timerExpired = True }, Cmd.none )
+    { init =
+        \sendToTimer sendToSelf flags ->
+            ( { timerExpired = False }, Cmd.none )
+    , update =
+        \sendToTimer sendToSelf msg model ->
+            case msg of
+                TimerExpired ->
+                    ( { model | timerExpired = True }, Cmd.none )
 
-                    TimerReset ->
-                        ( { model | timerExpired = False }, Cmd.none )
-        , view =
-            \viewTimer sendToTimer sendToSelf model ->
-                Html.div []
-                    [ Html.p []
-                        [ Html.text
-                            """
+                TimerReset ->
+                    ( { model | timerExpired = False }, Cmd.none )
+    , view =
+        \viewTimer sendToTimer sendToSelf model ->
+            Html.div []
+                [ Html.p []
+                    [ Html.text
+                        """
                             The timer element below comes from an 
                             encapsulated component, which manages its own 
                             state, completely separately from the app's 
@@ -54,19 +59,19 @@ app =
                             function, and receive messages sent by the app's 
                             view function.
                             """
-                        ]
-                    , viewTimer
-                    , Html.p []
-                        [ Html.text
-                            """
+                    ]
+                , viewTimer
+                , Html.p []
+                    [ Html.text
+                        """
                             Here is a `Debug.toString` of the app's model:
                             """
-                        ]
-                    , Html.p [ Html.Attributes.style "font-family" "monospace" ]
-                        [ Html.text (Debug.toString model) ]
-                    , Html.p []
-                        [ Html.text
-                            """
+                    ]
+                , Html.p [ Html.Attributes.style "font-family" "monospace" ]
+                    [ Html.text (Debug.toString model) ]
+                , Html.p []
+                    [ Html.text
+                        """
                             The only thing the app's model does is keep track of
                             whether the timer has expired. But as you can see, 
                             it doesn't (and can't) know anything about the 
@@ -77,24 +82,22 @@ app =
                             update function is configured to send a message to
                             the app's update function when it reaches zero
                             """
-                        ]
-                    , Html.p []
-                        [ Html.text
-                            """
+                    ]
+                , Html.p []
+                    [ Html.text
+                        """
                             Here we have a button in the app's view function 
                             that can send a message to the timer component
                             """
-                        ]
-                    , Html.button
-                        [ Html.Events.onClick (sendToTimer Reset) ]
-                        [ Html.text "Reset timer" ]
                     ]
-        , subscriptions =
-            \sendToTimer sendToSelf model ->
-                Sub.none
-        }
-        |> Composer.addComponent (timerComponent { timerExpired = TimerExpired, timerReset = TimerReset })
-        |> Composer.done
+                , Html.button
+                    [ Html.Events.onClick (sendToTimer Reset) ]
+                    [ Html.text "Reset timer" ]
+                ]
+    , subscriptions =
+        \sendToTimer sendToSelf model ->
+            Sub.none
+    }
 
 
 type TimerMsg
