@@ -1,7 +1,7 @@
 module Main exposing (..)
 
-import App
 import Browser
+import Composer
 import Html
 import Html.Attributes
 import Html.Events
@@ -29,7 +29,7 @@ type Msg
 
 
 app =
-    App.start
+    Composer.start
         { init =
             \sendToTimer sendToSelf flags ->
                 ( { timerExpired = False }, Cmd.none )
@@ -93,8 +93,8 @@ app =
             \sendToTimer sendToSelf model ->
                 Sub.none
         }
-        |> App.add (timerComponent { timerExpired = TimerExpired, timerReset = TimerReset })
-        |> App.done
+        |> Composer.add (timerComponent { timerExpired = TimerExpired, timerReset = TimerReset })
+        |> Composer.done
 
 
 type TimerMsg

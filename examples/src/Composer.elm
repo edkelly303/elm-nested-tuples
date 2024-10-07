@@ -1,4 +1,4 @@
-module App exposing (..)
+module Composer exposing (..)
 
 import NestedTuple as NT
 
