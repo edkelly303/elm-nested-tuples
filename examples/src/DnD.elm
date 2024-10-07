@@ -65,7 +65,7 @@ app =
 
 dndList { items, itemsUpdated } =
     { init =
-        -- slightly modified the DnDList's `init` function to allow us to pass 
+        -- slightly modified the DnDList's `init` function to allow us to pass
         -- in the list of items during initialisation.
         \sendToApp sendToSelf flags ->
             ( { dnd = system.model
@@ -74,7 +74,7 @@ dndList { items, itemsUpdated } =
             , Cmd.none
             )
     , update =
-        -- slightly modified the `update` function to send an `AppMsg` to the 
+        -- slightly modified the `update` function to send an `AppMsg` to the
         -- user's app whenever the list of items changes.
         \sendToApp sendToSelf msg model ->
             case msg of
@@ -86,7 +86,7 @@ dndList { items, itemsUpdated } =
                     ( { model | dnd = dnd, items = newItems }
                     , Cmd.batch
                         [ Cmd.map sendToSelf (system.commands dnd)
-                        , Task.perform (\_ -> sendToApp (itemsUpdated items)) (Process.sleep 0)
+                        , Task.perform (\_ -> sendToApp (itemsUpdated newItems)) (Process.sleep 0)
                         ]
                     )
     , view =
