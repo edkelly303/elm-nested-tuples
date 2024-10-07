@@ -3,7 +3,7 @@ module Composer exposing (..)
 import NestedTuple as NT
 
 
-start app =
+defineApp app =
     { app = app
     , emptyComponentsMsg = NT.empty
     , setters = NT.defineSetters
@@ -14,7 +14,7 @@ start app =
     }
 
 
-add component builder =
+addComponent component builder =
     { app = builder.app
     , emptyComponentsMsg = NT.cons Nothing builder.emptyComponentsMsg
     , setters = NT.setter builder.setters

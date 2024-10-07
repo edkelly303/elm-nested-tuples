@@ -29,7 +29,7 @@ type Msg
 
 
 app =
-    Composer.start
+    Composer.defineApp
         { init =
             \sendToTimer sendToSelf flags ->
                 ( { timerExpired = False }, Cmd.none )
@@ -93,7 +93,7 @@ app =
             \sendToTimer sendToSelf model ->
                 Sub.none
         }
-        |> Composer.add (timerComponent { timerExpired = TimerExpired, timerReset = TimerReset })
+        |> Composer.addComponent (timerComponent { timerExpired = TimerExpired, timerReset = TimerReset })
         |> Composer.done
 
 
