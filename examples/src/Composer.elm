@@ -22,15 +22,21 @@ addComponent component builder =
         NT.folder
             (\setter acc ->
                 let
+                    sendToComponent msg =
+                        ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
+
+                    sendToApp msg =
+                        ( Just msg, acc.emptyComponentsMsg )
+
                     ( thisComponentModel, thisCmd ) =
                         component.init
-                            (\msg -> ( Just msg, acc.emptyComponentsMsg ))
-                            (\msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg ))
+                            sendToApp
+                            sendToComponent
                             acc.flags
                 in
                 { componentsModel = NT.appender thisComponentModel acc.componentsModel
                 , appInit = acc.appInit (\msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg ))
-                , cmdList = thisCmd :: acc.cmdList
+                , componentCmdsList = thisCmd :: acc.componentCmdsList
                 , flags = acc.flags
                 , emptyComponentsMsg = acc.emptyComponentsMsg
                 }
@@ -40,11 +46,11 @@ addComponent component builder =
         NT.folder3
             (\setter maybeThisComponentMsg thisComponentModel acc ->
                 let
-                    sendToComponent =
-                        \msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
+                    sendToComponent msg =
+                        ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-                    sendToApp =
-                        \msg -> ( Just msg, acc.emptyComponentsMsg )
+                    sendToApp msg =
+                        ( Just msg, acc.emptyComponentsMsg )
 
                     appUpdate =
                         acc.appUpdate sendToComponent
@@ -72,11 +78,11 @@ addComponent component builder =
         NT.folder2
             (\setter thisComponentModel acc ->
                 let
-                    sendToComponent =
-                        \msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
+                    sendToComponent msg =
+                        ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-                    sendToApp =
-                        \msg -> ( Just msg, acc.emptyComponentsMsg )
+                    sendToApp msg =
+                        ( Just msg, acc.emptyComponentsMsg )
 
                     componentView =
                         component.view
@@ -93,20 +99,20 @@ addComponent component builder =
         NT.folder2
             (\setter thisComponentModel acc ->
                 let
-                    sendToComponent =
-                        \msg -> ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
+                    sendToComponent msg =
+                        ( Nothing, setter (Just msg) acc.emptyComponentsMsg )
 
-                    sendToApp =
-                        \msg -> ( Just msg, acc.emptyComponentsMsg )
+                    sendToApp msg =
+                        ( Just msg, acc.emptyComponentsMsg )
 
-                    subscriptions =
+                    componentSubscriptions =
                         component.subscriptions
                             sendToApp
                             sendToComponent
                             thisComponentModel
                 in
                 { appSubscriptions = acc.appSubscriptions sendToComponent
-                , componentSubscriptionsList = subscriptions :: acc.componentSubscriptionsList
+                , componentSubscriptionsList = componentSubscriptions :: acc.componentSubscriptionsList
                 , emptyComponentsMsg = acc.emptyComponentsMsg
                 }
             )
@@ -128,12 +134,12 @@ done builder =
                 initialise =
                     NT.endFolder builder.init
 
-                { appInit, cmdList, componentsModel } =
+                { appInit, componentCmdsList, componentsModel } =
                     initialise
                         { emptyComponentsMsg = builder.emptyComponentsMsg
                         , flags = flags
                         , appInit = builder.app.init
-                        , cmdList = []
+                        , componentCmdsList = []
                         , componentsModel = NT.define
                         }
                         setters
@@ -142,7 +148,7 @@ done builder =
                     appInit sendToApp flags
             in
             ( ( appModel, NT.endAppender componentsModel )
-            , Cmd.batch (appCmd :: cmdList)
+            , Cmd.batch (appCmd :: componentCmdsList)
             )
     , update =
         \( maybeAppMsg, componentsMsg ) ( appModel, componentsModel ) ->
