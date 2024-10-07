@@ -9,27 +9,43 @@ import Process
 import Task
 
 
-
--- MAIN
+fruits : List String
+fruits =
+    [ "Apples", "Bananas", "Cherries", "Dates" ]
 
 
 main :
     Program
         ()
-        ( List Fruit, ( Model, () ) )
-        ( Maybe AppMsg, ( Maybe Msg, () ) )
+        ( AppModel, ( DnDModel, () ) )
+        ( Maybe AppMsg, ( Maybe DnDMsg, () ) )
 main =
     Browser.element program
 
 
 program =
     Composer.defineApp app
-        |> Composer.addComponent component
+        |> Composer.addComponent
+            (dndList
+                { items = fruits
+                , itemsUpdated = ItemsUpdated
+                }
+            )
         |> Composer.done
 
 
+type alias AppModel =
+    -- our `AppModel` knows _nothing at all_ about the `DnDList`; all it
+    -- contains is the list of items.
+    List String
+
+
+type AppMsg
+    = ItemsUpdated (List String)
+
+
 app =
-    { init = \sendToDnD sendToSelf flags -> ( data, Cmd.none )
+    { init = \sendToDnD sendToSelf flags -> ( fruits, Cmd.none )
     , update =
         \sendToDnD sendToSelf msg model ->
             case msg of
@@ -38,29 +54,48 @@ app =
     , view =
         \viewDnD sendToDnD sendToSelf model ->
             Html.div []
-                [ viewDnD
+                [ Html.p [] [ Html.text "This is the view of the `dndList` component:" ]
+                , viewDnD
+                , Html.p [] [ Html.text "This is a `Debug.toString` of the `AppModel`:" ]
                 , Html.text (Debug.toString model)
                 ]
     , subscriptions = \sendToDnD sendToSelf model -> Sub.none
     }
 
 
-type AppMsg
-    = ItemsUpdated (List Fruit)
-
-
-component =
+dndList { items, itemsUpdated } =
     { init =
+        -- slightly modified the DnDList's `init` function to allow us to pass 
+        -- in the list of items during initialisation.
         \sendToApp sendToSelf flags ->
-            init flags
-                |> Tuple.mapSecond (Cmd.map sendToSelf)
+            ( { dnd = system.model
+              , items = items
+              }
+            , Cmd.none
+            )
     , update =
-        update
+        -- slightly modified the `update` function to send an `AppMsg` to the 
+        -- user's app whenever the list of items changes.
+        \sendToApp sendToSelf msg model ->
+            case msg of
+                DnDMsg dndMsg ->
+                    let
+                        ( dnd, newItems ) =
+                            system.update dndMsg model.dnd model.items
+                    in
+                    ( { model | dnd = dnd, items = newItems }
+                    , Cmd.batch
+                        [ Cmd.map sendToSelf (system.commands dnd)
+                        , Task.perform (\_ -> sendToApp (itemsUpdated items)) (Process.sleep 0)
+                        ]
+                    )
     , view =
+        -- `view` is exactly the same, we just need to map the `Html msg`
         \sendToApp sendToSelf model ->
             view model
                 |> Html.map sendToSelf
     , subscriptions =
+        -- `subscriptions` is exactly the same, we just need to map the `Sub msg`
         \sendToApp sendToSelf model ->
             subscriptions model
                 |> Sub.map sendToSelf
@@ -68,23 +103,10 @@ component =
 
 
 
--- DATA
+-- All the code from this point on is _exactly_ the same as it is in the DnDList docs
 
 
-type alias Fruit =
-    String
-
-
-data : List Fruit
-data =
-    [ "Apples", "Bananas", "Cherries", "Dates" ]
-
-
-
--- SYSTEM
-
-
-config : DnDList.Config Fruit
+config : DnDList.Config String
 config =
     { beforeUpdate = \_ _ list -> list
     , movement = DnDList.Free
@@ -93,70 +115,27 @@ config =
     }
 
 
-system : DnDList.System Fruit Msg
+system : DnDList.System String DnDMsg
 system =
-    DnDList.create config MyMsg
+    DnDList.create config DnDMsg
 
 
-
--- MODEL
-
-
-type alias Model =
+type alias DnDModel =
     { dnd : DnDList.Model
-    , items : List Fruit
+    , items : List String
     }
 
 
-initialModel : Model
-initialModel =
-    { dnd = system.model
-    , items = data
-    }
+type DnDMsg
+    = DnDMsg DnDList.Msg
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( initialModel, Cmd.none )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
+subscriptions : DnDModel -> Sub DnDMsg
 subscriptions model =
     system.subscriptions model.dnd
 
 
-
--- UPDATE
-
-
-type Msg
-    = MyMsg DnDList.Msg
-
-
-update sendToApp sendToSelf message model =
-    case message of
-        MyMsg msg ->
-            let
-                ( dnd, items ) =
-                    system.update msg model.dnd model.items
-            in
-            ( { model | dnd = dnd, items = items }
-            , Cmd.batch
-                [ Cmd.map sendToSelf (system.commands dnd)
-                , Cmd.map sendToApp (Task.perform (\_ -> ItemsUpdated items) (Process.sleep 0))
-                ]
-            )
-
-
-
--- VIEW
-
-
-view : Model -> Html.Html Msg
+view : DnDModel -> Html.Html DnDMsg
 view model =
     Html.section
         [ Html.Attributes.style "text-align" "center" ]
@@ -167,7 +146,7 @@ view model =
         ]
 
 
-itemView : DnDList.Model -> Int -> Fruit -> Html.Html Msg
+itemView : DnDList.Model -> Int -> String -> Html.Html DnDMsg
 itemView dnd index item =
     let
         itemId : String
@@ -192,10 +171,10 @@ itemView dnd index item =
                 [ Html.text item ]
 
 
-ghostView : DnDList.Model -> List Fruit -> Html.Html Msg
+ghostView : DnDList.Model -> List String -> Html.Html DnDMsg
 ghostView dnd items =
     let
-        maybeDragItem : Maybe Fruit
+        maybeDragItem : Maybe String
         maybeDragItem =
             system.info dnd
                 |> Maybe.andThen (\{ dragIndex } -> items |> List.drop dragIndex |> List.head)
