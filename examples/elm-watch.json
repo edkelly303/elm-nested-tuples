@@ -1,12 +1,18 @@
 {
     "targets": {
-        "composer-demo": {
+        "timer-demo": {
             "inputs": [
-                "src/Main.elm"
+                "src/Timer.elm"
             ],
-            "output": "build/main.js"
+            "output": "public/build/timer.js"
+        },
+        "dnd-demo": {
+            "inputs": [
+                "src/DnD.elm"
+            ],
+            "output": "public/build/dnd.js"
         }
     },
     "port": 8000,
-    "serve": "."
+    "serve": "./public"
 }
