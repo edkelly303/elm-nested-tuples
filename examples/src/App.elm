@@ -55,10 +55,10 @@ add component builder =
             builder.updater
     , cmder =
         NT.folder3
-            (\setter maybeThisComponentMsg thisComponentModel ( parentUpdate, cmdList, emptyComponentsMsg_ ) ->
+            (\setter maybeThisComponentMsg thisComponentModel ( appUpdate, cmdList, emptyComponentsMsg_ ) ->
                 let
-                    newParentUpdate =
-                        parentUpdate (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                    newAppUpdate =
+                        appUpdate (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
 
                     newCmdList =
                         case maybeThisComponentMsg of
@@ -76,12 +76,12 @@ add component builder =
                             Nothing ->
                                 cmdList
                 in
-                ( newParentUpdate, newCmdList, emptyComponentsMsg_ )
+                ( newAppUpdate, newCmdList, emptyComponentsMsg_ )
             )
             builder.cmder
     , viewer =
         NT.folder2
-            (\setter thisComponentModel ( parentView, emptyComponentsMsg_ ) ->
+            (\setter thisComponentModel ( appView, emptyComponentsMsg_ ) ->
                 let
                     view =
                         component.view
@@ -89,17 +89,16 @@ add component builder =
                             (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             thisComponentModel
                 in
-                ( parentView
-                    { output = view
-                    , sendTo = \msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ )
-                    }
+                ( appView
+                    view
+                    (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                 , emptyComponentsMsg_
                 )
             )
             builder.viewer
     , subscriber =
         NT.folder2
-            (\setter thisComponentModel ( parentSubscriptions, subList, emptyComponentsMsg_ ) ->
+            (\setter thisComponentModel ( appSubscriptions, subList, emptyComponentsMsg_ ) ->
                 let
                     subscriptions =
                         component.subscriptions
@@ -107,7 +106,7 @@ add component builder =
                             (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                             thisComponentModel
                 in
-                ( parentSubscriptions (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
+                ( appSubscriptions (\msg -> ( Nothing, setter (Just msg) emptyComponentsMsg_ ))
                 , subscriptions :: subList
                 , emptyComponentsMsg_
                 )
