@@ -3,7 +3,7 @@ module NestedTuple exposing
     , singleton, mapHead, mapTail
     , define
     , appender, endAppender
-    , mapper, endMapper, mapper2, endMapper2, mapper3, endMapper3, mapper2WithContext, endMapper2WithContext, mapper3WithContext, endMapper3WithContext
+    , mapper, endMapper, mapper2, endMapper2, mapper3, endMapper3
     , folder, endFolder, folder2, endFolder2, folder3, endFolder3
     , defineGetters, getter, endGetters
     , defineSetters, setter, endSetters
@@ -50,7 +50,7 @@ else should _just work_.
 
 ## Mappers
 
-@docs mapper, endMapper, mapper2, endMapper2, mapper3, endMapper3, mapper2WithContext, endMapper2WithContext, mapper3WithContext, endMapper3WithContext
+@docs mapper, endMapper, mapper2, endMapper2, mapper3, endMapper3
 
 
 ## Folders
@@ -253,26 +253,6 @@ endMapper2 =
     end (\_ _ -> empty)
 
 
-mapper2WithContext :
-    (ctx -> headA -> headB -> headC)
-    -> ((ctx -> ( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC )) -> toMapper2WithContext)
-    -> (ctx -> tailA -> tailB -> tailC)
-    -> toMapper2WithContext
-mapper2WithContext =
-    let
-        mapper2_ fHead fTail ctx a b =
-            cons
-                (fHead ctx (head a) (head b))
-                (fTail ctx (tail a) (tail b))
-    in
-    do mapper2_
-
-
-endMapper2WithContext : ((ctx -> () -> () -> ()) -> mapper2WithContext) -> mapper2WithContext
-endMapper2WithContext =
-    end (\_ _ _ -> empty)
-
-
 {-| Create a `mapper` for three nested tuples by defining map functions for each element of the tuples.
 
 This needs to be used in conjunction with `define` and `endMapper3`:
@@ -312,26 +292,6 @@ mapper3 =
 endMapper3 : ((() -> () -> () -> ()) -> mapper3) -> mapper3
 endMapper3 =
     end (\_ _ _ -> empty)
-
-
-mapper3WithContext :
-    (ctx -> headA -> headB -> headC -> headD)
-    -> ((ctx -> ( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> ( headD, tailD )) -> toMapper3WithContext)
-    -> (ctx -> tailA -> tailB -> tailC -> tailD)
-    -> toMapper3WithContext
-mapper3WithContext =
-    let
-        mapper3_ fHead fTail ctx a b c =
-            cons
-                (fHead ctx (head a) (head b) (head c))
-                (fTail ctx (tail a) (tail b) (tail c))
-    in
-    do mapper3_
-
-
-endMapper3WithContext : ((ctx -> () -> () -> () -> ()) -> mapper3WithContext) -> mapper3WithContext
-endMapper3WithContext =
-    end (\_ _ _ _ -> empty)
 
 
 
