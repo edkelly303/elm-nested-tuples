@@ -196,21 +196,20 @@ mapper :
     -> ((( headA, tailA ) -> ( headB, tailB )) -> toMapper)
     -> (tailA -> tailB)
     -> toMapper
-mapper =
-    let
-        mapper_ fHead fTail a =
+mapper f prev next =
+    prev
+        (\tuple ->
             cons
-                (fHead (head a))
-                (fTail (tail a))
-    in
-    do mapper_
+                (f (head tuple))
+                (next (tail tuple))
+        )
 
 
 {-| Complete the definition of a `mapper`.
 -}
 endMapper : ((() -> ()) -> mapper) -> mapper
-endMapper =
-    end (\_ -> empty)
+endMapper prev =
+    prev (\_ -> empty)
 
 
 {-| Create a `mapper` for two nested tuples by defining map functions for each element of the tuples.
@@ -236,21 +235,20 @@ mapper2 :
     -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC )) -> toMapper2)
     -> (tailA -> tailB -> tailC)
     -> toMapper2
-mapper2 =
-    let
-        mapper2_ fHead fTail a b =
+mapper2 f prev next =
+    prev
+        (\tuple1 tuple2 ->
             cons
-                (fHead (head a) (head b))
-                (fTail (tail a) (tail b))
-    in
-    do mapper2_
+                (f (head tuple1) (head tuple2))
+                (next (tail tuple1) (tail tuple2))
+        )
 
 
 {-| Complete the definition of a `mapper2`.
 -}
 endMapper2 : ((() -> () -> ()) -> mapper2) -> mapper2
-endMapper2 =
-    end (\_ _ -> empty)
+endMapper2 prev =
+    prev (\_ _ -> empty)
 
 
 {-| Create a `mapper` for three nested tuples by defining map functions for each element of the tuples.
@@ -277,21 +275,20 @@ mapper3 :
     -> ((( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> ( headD, tailD )) -> toMapper3)
     -> (tailA -> tailB -> tailC -> tailD)
     -> toMapper3
-mapper3 =
-    let
-        mapper3_ fHead fTail a b c =
+mapper3 f prev next =
+    prev
+        (\tuple1 tuple2 tuple3 ->
             cons
-                (fHead (head a) (head b) (head c))
-                (fTail (tail a) (tail b) (tail c))
-    in
-    do mapper3_
+                (f (head tuple1) (head tuple2) (head tuple3))
+                (next (tail tuple1) (tail tuple2) (tail tuple3))
+        )
 
 
 {-| Complete the definition of a `mapper3`.
 -}
 endMapper3 : ((() -> () -> () -> ()) -> mapper3) -> mapper3
-endMapper3 =
-    end (\_ _ _ -> empty)
+endMapper3 prev =
+    prev (\_ _ _ -> empty)
 
 
 
@@ -320,23 +317,22 @@ folder :
     -> ((accForHead -> ( head, tail ) -> accForNext) -> toFolder)
     -> (accForTail -> tail -> accForNext)
     -> toFolder
-folder =
-    let
-        folder_ foldHead foldTail accForHead tuple =
+folder f prev next =
+    prev
+        (\acc tuple ->
             let
-                accForTail =
-                    foldHead (head tuple) accForHead
+                accForNext =
+                    f (head tuple) acc
             in
-            foldTail accForTail (tail tuple)
-    in
-    do folder_
+            next accForNext (tail tuple)
+        )
 
 
 {-| Complete the definition of a `folder`.
 -}
 endFolder : ((acc -> empty -> acc) -> folder) -> folder
-endFolder =
-    end (\acc _ -> acc)
+endFolder prev =
+    prev (\acc _ -> acc)
 
 
 {-| Create a `folder2` for two nested tuples by defining fold functions for each element of the tuples.
@@ -363,23 +359,22 @@ folder2 :
     -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> accForNext) -> toFolder2)
     -> (accForTail -> tailA -> tailB -> accForNext)
     -> toFolder2
-folder2 =
-    let
-        folder2_ foldHead foldTail accForHead tuple1 tuple2 =
+folder2 f prev next =
+    prev
+        (\acc tuple1 tuple2 ->
             let
                 accForTail =
-                    foldHead (head tuple1) (head tuple2) accForHead
+                    f (head tuple1) (head tuple2) acc
             in
-            foldTail accForTail (tail tuple1) (tail tuple2)
-    in
-    do folder2_
+            next accForTail (tail tuple1) (tail tuple2)
+        )
 
 
 {-| Complete the definition of a `folder2`.
 -}
 endFolder2 : ((acc -> empty -> empty -> acc) -> folder2) -> folder2
-endFolder2 =
-    end (\acc _ _ -> acc)
+endFolder2 prev =
+    prev (\acc _ _ -> acc)
 
 
 {-| Create a `folder3` for three nested tuples by defining fold functions for each element of the tuples.
@@ -407,23 +402,22 @@ folder3 :
     -> ((accForHead -> ( headA, tailA ) -> ( headB, tailB ) -> ( headC, tailC ) -> accForNext) -> toFolder3)
     -> (accForTail -> tailA -> tailB -> tailC -> accForNext)
     -> toFolder3
-folder3 =
-    let
-        folder3_ foldHead foldTail accForHead tuple1 tuple2 tuple3 =
+folder3 f prev next =
+    prev
+        (\acc tuple1 tuple2 tuple3 ->
             let
                 accForTail =
-                    foldHead (head tuple1) (head tuple2) (head tuple3) accForHead
+                    f (head tuple1) (head tuple2) (head tuple3) acc
             in
-            foldTail accForTail (tail tuple1) (tail tuple2) (tail tuple3)
-    in
-    do folder3_
+            next accForTail (tail tuple1) (tail tuple2) (tail tuple3)
+        )
 
 
 {-| Complete the definition of a `folder3`.
 -}
 endFolder3 : ((acc -> empty -> empty -> empty -> acc) -> folder3) -> folder3
-endFolder3 =
-    end (\acc _ _ _ -> acc)
+endFolder3 prev =
+    prev (\acc _ _ _ -> acc)
 
 
 
@@ -552,17 +546,3 @@ endSetters :
     -> setters
 endSetters { appendToSetters } =
     appendToSetters empty
-
-
-
--- Magic
-
-
-do : (doThis -> doRest -> todoPrev) -> doThis -> (todoPrev -> done) -> doRest -> done
-do doer doThis doPrev =
-    \doRest -> doPrev (doer doThis doRest)
-
-
-end : ender -> (ender -> done) -> done
-end ender prev =
-    prev ender
